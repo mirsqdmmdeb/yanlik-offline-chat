@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react';
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, colorTheme, setColorTheme } = useTheme();
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [notifications, setNotifications] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -69,6 +69,42 @@ const Settings = () => {
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="auto" id="auto" />
                     <Label htmlFor="auto">Otomatik</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label>Renk Teması</Label>
+                <RadioGroup value={colorTheme} onValueChange={(value) => setColorTheme(value as any)}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="default" id="default" />
+                    <Label htmlFor="default">Varsayılan</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="ocean" id="ocean" />
+                    <Label htmlFor="ocean">🌊 Okyanus</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="purple" id="purple" />
+                    <Label htmlFor="purple">💜 Mor Rüya</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="forest" id="forest" />
+                    <Label htmlFor="forest">🌲 Orman</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="sunset" id="sunset" />
+                    <Label htmlFor="sunset">🌅 Gün Batımı</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="rose" id="rose" />
+                    <Label htmlFor="rose">🌹 Pembe</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="midnight" id="midnight" />
+                    <Label htmlFor="midnight">🌙 Gece Mavisi</Label>
                   </div>
                 </RadioGroup>
               </div>
