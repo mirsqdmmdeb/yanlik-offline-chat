@@ -44,97 +44,129 @@ const Admin = () => {
   if (!user?.isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="mx-auto max-w-4xl">
-        <Button variant="ghost" onClick={() => navigate('/chat')} className="mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4 relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float" />
+        <div className="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+      </div>
+
+      <div className="relative mx-auto max-w-4xl">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate('/chat')} 
+          className="mb-4 hover:bg-primary/10 animate-fade-in"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Geri
         </Button>
 
-        <h1 className="mb-6 text-3xl font-bold">Admin Paneli</h1>
+        <div className="flex items-center gap-3 mb-6 animate-scale-in">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+            <Settings className="w-6 h-6 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold">Admin Paneli</h1>
+        </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Card>
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-scale-in">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Toplam Kullanıcı</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                <Users className="h-5 w-5 text-white" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalUsers}</div>
-              <p className="text-xs text-muted-foreground">Aktif kullanıcı sayısı</p>
+              <div className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">{stats.totalUsers}</div>
+              <p className="text-xs text-muted-foreground mt-1">Aktif kullanıcı sayısı</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-scale-in" style={{ animationDelay: '0.1s' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Toplam Mesaj</CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-white" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalMessages}</div>
-              <p className="text-xs text-muted-foreground">Gönderilen mesaj sayısı</p>
+              <div className="text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent">{stats.totalMessages}</div>
+              <p className="text-xs text-muted-foreground mt-1">Gönderilen mesaj sayısı</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-scale-in" style={{ animationDelay: '0.2s' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Depolama Kullanımı</CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                <Database className="h-5 w-5 text-white" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.storageUsed}</div>
-              <p className="text-xs text-muted-foreground">Yerel depolama</p>
+              <div className="text-3xl font-bold bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">{stats.storageUsed}</div>
+              <p className="text-xs text-muted-foreground mt-1">Yerel depolama</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-scale-in" style={{ animationDelay: '0.3s' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Çalışma Süresi</CardTitle>
-              <Settings className="h-4 w-4 text-muted-foreground" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <Settings className="h-5 w-5 text-white" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.uptime}</div>
-              <p className="text-xs text-muted-foreground">Sistem aktif</p>
+              <div className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">{stats.uptime}</div>
+              <p className="text-xs text-muted-foreground mt-1">Sistem aktif</p>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="mt-6">
+        <Card className="mt-6 bg-card/80 backdrop-blur-sm border-border/50 animate-fade-in-up">
           <CardHeader>
-            <CardTitle>Sistem Bilgileri</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="w-5 h-5 text-primary" />
+              Sistem Bilgileri
+            </CardTitle>
             <CardDescription>Uygulama detayları ve durum bilgisi</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <div className="flex justify-between">
+            <div className="grid gap-3">
+              <div className="flex justify-between items-center p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
                 <span className="text-muted-foreground">Versiyon:</span>
-                <span className="font-medium">1.0.0</span>
+                <span className="font-semibold">1.0.0</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
                 <span className="text-muted-foreground">Platform:</span>
-                <span className="font-medium">Web (Offline)</span>
+                <span className="font-semibold">Web (Offline)</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
                 <span className="text-muted-foreground">Durum:</span>
-                <span className="font-medium text-green-600">Aktif</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse-glow" />
+                  <span className="font-semibold text-green-600 dark:text-green-400">Aktif</span>
+                </div>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
                 <span className="text-muted-foreground">Son Güncelleme:</span>
-                <span className="font-medium">{new Date().toLocaleDateString('tr-TR')}</span>
+                <span className="font-semibold">{new Date().toLocaleDateString('tr-TR')}</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="mt-6">
+        <Card className="mt-6 bg-card/80 backdrop-blur-sm border-border/50 animate-fade-in-up">
           <CardHeader>
-            <CardTitle>Yönetim İşlemleri</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-primary" />
+              Yönetim İşlemleri
+            </CardTitle>
             <CardDescription>Sistem bakım ve yönetim araçları</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-3">
             <Button
               variant="outline"
-              className="w-full"
+              className="w-full h-12 border-2 hover:bg-destructive/10 hover:border-destructive transition-all"
               onClick={() => {
                 if (confirm('Tüm sistem verileri silinecek. Emin misiniz?')) {
                   localStorage.clear();
@@ -143,11 +175,12 @@ const Admin = () => {
                 }
               }}
             >
+              <Database className="mr-2 h-5 w-5" />
               Tüm Verileri Temizle
             </Button>
             <Button
               variant="outline"
-              className="w-full"
+              className="w-full h-12 border-2 hover:bg-primary/10 hover:border-primary transition-all"
               onClick={() => {
                 const data = {
                   user: localStorage.getItem('yanlik_user'),
@@ -163,6 +196,7 @@ const Admin = () => {
                 a.click();
               }}
             >
+              <ArrowLeft className="mr-2 h-5 w-5 rotate-180" />
               Verileri Dışa Aktar
             </Button>
           </CardContent>

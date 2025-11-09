@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getChatResponse } from '@/lib/chatResponses';
-import { LogOut, Settings, Menu, Info } from 'lucide-react';
+import { LogOut, Settings, Menu, Info, Send, Sparkles, User, Bot } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -34,7 +35,7 @@ const Chat = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isTyping) return;
 
     const userMessage: Message = { role: 'user', content: input, timestamp: new Date() };
     setMessages(prev => [...prev, userMessage]);
@@ -50,18 +51,25 @@ const Chat = () => {
   };
 
   const Sidebar = () => (
-    <div className="flex h-full flex-col border-r border-border bg-card p-4">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Yanlik</h1>
-        <p className="text-sm text-muted-foreground">Yapay Zeka Asistanı</p>
+    <div className="flex h-full flex-col bg-card/50 backdrop-blur-sm border-r border-border/50 p-4">
+      <div className="mb-6 space-y-2 animate-fade-in">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">Yanlik</h1>
+            <p className="text-xs text-muted-foreground">AI Asistanı</p>
+          </div>
+        </div>
       </div>
       
       <div className="flex-1" />
       
-      <div className="space-y-2">
+      <div className="space-y-1">
         <Button
           variant="ghost"
-          className="w-full justify-start"
+          className="w-full justify-start hover:bg-primary/10 transition-all duration-200"
           onClick={() => navigate('/about')}
         >
           <Info className="mr-2 h-4 w-4" />
@@ -69,7 +77,7 @@ const Chat = () => {
         </Button>
         <Button
           variant="ghost"
-          className="w-full justify-start"
+          className="w-full justify-start hover:bg-primary/10 transition-all duration-200"
           onClick={() => navigate('/settings')}
         >
           <Settings className="mr-2 h-4 w-4" />
@@ -78,7 +86,7 @@ const Chat = () => {
         {user?.isAdmin && (
           <Button
             variant="ghost"
-            className="w-full justify-start"
+            className="w-full justify-start hover:bg-primary/10 transition-all duration-200"
             onClick={() => navigate('/admin')}
           >
             <Settings className="mr-2 h-4 w-4" />
@@ -87,7 +95,7 @@ const Chat = () => {
         )}
         <Button
           variant="ghost"
-          className="w-full justify-start"
+          className="w-full justify-start text-destructive hover:bg-destructive/10 transition-all duration-200"
           onClick={() => {
             logout();
             navigate('/login');
@@ -101,7 +109,7 @@ const Chat = () => {
   );
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Desktop Sidebar */}
       <div className="hidden w-64 md:block">
         <Sidebar />
@@ -110,7 +118,7 @@ const Chat = () => {
       {/* Mobile Sidebar */}
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="md:hidden absolute top-4 left-4 z-50">
+          <Button variant="ghost" size="icon" className="md:hidden absolute top-4 left-4 z-50 hover:bg-primary/10">
             <Menu className="h-6 w-6" />
           </Button>
         </SheetTrigger>
@@ -121,46 +129,89 @@ const Chat = () => {
 
       {/* Main Chat Area */}
       <div className="flex flex-1 flex-col">
+        {/* Header */}
+        <div className="border-b border-border/50 bg-card/30 backdrop-blur-sm p-4 animate-slide-in-right">
+          <div className="mx-auto max-w-3xl flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse-glow" />
+              <span className="text-sm text-muted-foreground">Online</span>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Hoş geldin, <span className="font-semibold text-foreground">{user?.username}</span>
+            </div>
+          </div>
+        </div>
+
         <ScrollArea className="flex-1 p-4">
-          <div className="mx-auto max-w-3xl space-y-4">
+          <div className="mx-auto max-w-3xl space-y-6 py-4">
             {messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex gap-3 animate-fade-in-up ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div
-                  className={`rounded-lg px-4 py-2 max-w-[80%] ${
-                    msg.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-foreground'
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                  <p className="mt-1 text-xs opacity-70">
+                {msg.role === 'assistant' && (
+                  <Avatar className="w-8 h-8 border-2 border-primary/20">
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80">
+                      <Bot className="w-4 h-4 text-white" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                
+                <div className={`flex flex-col max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  <div
+                    className={`rounded-2xl px-4 py-3 transition-all duration-200 hover:shadow-lg ${
+                      msg.role === 'user'
+                        ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/20'
+                        : 'bg-card/80 backdrop-blur-sm border border-border/50 text-foreground'
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground mt-1 px-2">
                     {msg.timestamp.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                  </span>
                 </div>
+
+                {msg.role === 'user' && (
+                  <Avatar className="w-8 h-8 border-2 border-border">
+                    <AvatarFallback className="bg-secondary">
+                      <User className="w-4 h-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
               </div>
             ))}
+            
             {isTyping && (
-              <div className="flex justify-start">
-                <div className="rounded-lg bg-muted px-4 py-2">
-                  <p className="text-muted-foreground">Yazıyor...</p>
+              <div className="flex gap-3 animate-fade-in">
+                <Avatar className="w-8 h-8 border-2 border-primary/20">
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80">
+                    <Bot className="w-4 h-4 text-white" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 px-4 py-3">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce" />
+                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0.1s' }} />
+                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0.2s' }} />
+                  </div>
                 </div>
               </div>
             )}
+            
             <div ref={scrollRef} />
           </div>
         </ScrollArea>
 
-        <div className="border-t border-border p-4">
+        {/* Input Area */}
+        <div className="border-t border-border/50 bg-card/30 backdrop-blur-sm p-4 animate-slide-in-right">
           <form onSubmit={handleSubmit} className="mx-auto max-w-3xl">
             <div className="flex gap-2">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Mesajınızı yazın..."
-                className="min-h-[60px] resize-none"
+                className="min-h-[60px] resize-none bg-background/50 border-border/50 focus:border-primary/50 transition-colors"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -168,8 +219,13 @@ const Chat = () => {
                   }
                 }}
               />
-              <Button type="submit" disabled={!input.trim() || isTyping}>
-                Gönder
+              <Button 
+                type="submit" 
+                disabled={!input.trim() || isTyping}
+                size="lg"
+                className="px-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200 hover:scale-105"
+              >
+                <Send className="w-5 h-5" />
               </Button>
             </div>
           </form>
