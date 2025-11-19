@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getChatResponse } from '@/lib/chatResponses';
-import { LogOut, Settings, Menu, Info, Send, Sparkles, User, Bot } from 'lucide-react';
+import { LogOut, Settings, Menu, Info, Send, Sparkles, User, Bot, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -15,15 +16,56 @@ interface Message {
   timestamp: Date;
 }
 
+const STORAGE_KEY = 'yanlik_chat_history';
+
+const PROMPT_SUGGESTIONS = [
+  'Yapay zeka hakkında bilgi ver',
+  'Trading stratejileri nelerdir?',
+  'React nasıl öğrenilir?',
+  'Yanlik nedir?'
+];
+
 const Chat = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Merhaba! Ben Yanlik. Size nasıl yardımcı olabilirim?', timestamp: new Date() }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Load messages from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setMessages(parsed.map((m: Message) => ({
+          ...m,
+          timestamp: new Date(m.timestamp)
+        })));
+      } catch (e) {
+        console.error('Failed to load chat history', e);
+      }
+    } else {
+      // Initial welcome message
+      setMessages([
+        { 
+          role: 'assistant', 
+          content: 'Merhaba! Ben Yanlik, tarayıcıda çalışan yapay zeka asistanınız. Size nasıl yardımcı olabilirim?', 
+          timestamp: new Date() 
+        }
+      ]);
+    }
+  }, []);
+
+  // Save messages to localStorage
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (!user) navigate('/login');
@@ -31,7 +73,7 @@ const Chat = () => {
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isTyping]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,12 +84,46 @@ const Chat = () => {
     setInput('');
     setIsTyping(true);
 
+    // Focus back to input
+    setTimeout(() => inputRef.current?.focus(), 100);
+
     setTimeout(() => {
       const response = getChatResponse(input);
       const assistantMessage: Message = { role: 'assistant', content: response, timestamp: new Date() };
       setMessages(prev => [...prev, assistantMessage]);
       setIsTyping(false);
     }, 500 + Math.random() * 1000);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as any);
+    }
+  };
+
+  const clearChat = () => {
+    setMessages([
+      { 
+        role: 'assistant', 
+        content: 'Sohbet temizlendi. Yeni bir konuşma başlayalım! 🚀', 
+        timestamp: new Date() 
+      }
+    ]);
+    localStorage.removeItem(STORAGE_KEY);
+    toast({
+      title: 'Sohbet Temizlendi',
+      description: 'Tüm mesajlar silindi.',
+    });
+  };
+
+  const useSuggestion = (suggestion: string) => {
+    setInput(suggestion);
+    inputRef.current?.focus();
+  };
+
+  const formatTime = (date: Date) => {
+    return new Date(date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
   };
 
   const Sidebar = () => (
@@ -67,6 +143,14 @@ const Chat = () => {
       <div className="flex-1" />
       
       <div className="space-y-1">
+        <Button
+          variant="ghost"
+          className="w-full justify-start hover:bg-primary/10 transition-all duration-200"
+          onClick={clearChat}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Sohbeti Temizle
+        </Button>
         <Button
           variant="ghost"
           className="w-full justify-start hover:bg-primary/10 transition-all duration-200"
@@ -111,123 +195,150 @@ const Chat = () => {
   return (
     <div className="flex h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Desktop Sidebar */}
-      <div className="hidden w-64 md:block">
+      <div className="hidden md:block w-64">
         <Sidebar />
       </div>
 
-      {/* Mobile Sidebar */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="md:hidden absolute top-4 left-4 z-50 hover:bg-primary/10">
-            <Menu className="h-6 w-6" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
-          <Sidebar />
-        </SheetContent>
-      </Sheet>
-
       {/* Main Chat Area */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex-1 flex flex-col">
         {/* Header */}
-        <div className="border-b border-border/50 bg-card/30 backdrop-blur-sm p-4 animate-slide-in-right">
-          <div className="mx-auto max-w-3xl flex items-center justify-between">
+        <div className="border-b border-border/50 bg-card/30 backdrop-blur-sm p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {/* Mobile Menu */}
+            <Sheet>
+              <SheetTrigger asChild className="md:hidden">
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-0">
+                <Sidebar />
+              </SheetContent>
+            </Sheet>
+
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse-glow" />
-              <span className="text-sm text-muted-foreground">Online</span>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Hoş geldin, <span className="font-semibold text-foreground">{user?.username}</span>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h2 className="font-semibold">Yanlik</h2>
+                <p className="text-xs text-muted-foreground">Demo Sürüm</p>
+              </div>
             </div>
           </div>
+
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={clearChat}
+            className="hidden sm:flex"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Temizle
+          </Button>
         </div>
 
+        {/* Messages Area */}
         <ScrollArea className="flex-1 p-4">
-          <div className="mx-auto max-w-3xl space-y-6 py-4">
-            {messages.map((msg, idx) => (
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* Prompt Suggestions (only show at start) */}
+            {messages.length === 1 && (
+              <div className="space-y-3 animate-fade-in">
+                <p className="text-sm text-muted-foreground text-center">Örnek sorular:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {PROMPT_SUGGESTIONS.map((suggestion, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      className="text-left justify-start h-auto py-3 hover:bg-primary/5"
+                      onClick={() => useSuggestion(suggestion)}
+                    >
+                      {suggestion}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map((message, idx) => (
               <div
                 key={idx}
-                className={`flex gap-3 animate-fade-in-up ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex gap-3 animate-fade-in ${
+                  message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
+                }`}
               >
-                {msg.role === 'assistant' && (
-                  <Avatar className="w-8 h-8 border-2 border-primary/20">
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80">
-                      <Bot className="w-4 h-4 text-white" />
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-                
-                <div className={`flex flex-col max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                {/* Avatar */}
+                <Avatar className="w-8 h-8 border-2 border-border">
+                  <AvatarFallback className={message.role === 'user' ? 'bg-primary' : 'bg-gradient-to-br from-primary to-primary/80'}>
+                    {message.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-white" />}
+                  </AvatarFallback>
+                </Avatar>
+
+                {/* Message Bubble */}
+                <div className={`flex-1 max-w-2xl ${message.role === 'user' ? 'flex justify-end' : ''}`}>
                   <div
-                    className={`rounded-2xl px-4 py-3 transition-all duration-200 hover:shadow-lg ${
-                      msg.role === 'user'
-                        ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/20'
-                        : 'bg-card/80 backdrop-blur-sm border border-border/50 text-foreground'
+                    className={`rounded-2xl px-4 py-3 ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card border border-border/50'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                    <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                      {formatTime(message.timestamp)}
+                    </p>
                   </div>
-                  <span className="text-xs text-muted-foreground mt-1 px-2">
-                    {msg.timestamp.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
                 </div>
-
-                {msg.role === 'user' && (
-                  <Avatar className="w-8 h-8 border-2 border-border">
-                    <AvatarFallback className="bg-secondary">
-                      <User className="w-4 h-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                )}
               </div>
             ))}
-            
+
+            {/* Typing Indicator */}
             {isTyping && (
               <div className="flex gap-3 animate-fade-in">
-                <Avatar className="w-8 h-8 border-2 border-primary/20">
+                <Avatar className="w-8 h-8 border-2 border-border">
                   <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80">
                     <Bot className="w-4 h-4 text-white" />
                   </AvatarFallback>
                 </Avatar>
-                <div className="rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 px-4 py-3">
+                <div className="bg-card border border-border/50 rounded-2xl px-4 py-3">
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce" />
-                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0.1s' }} />
-                    <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0.2s' }} />
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
             )}
-            
+
             <div ref={scrollRef} />
           </div>
         </ScrollArea>
 
         {/* Input Area */}
-        <div className="border-t border-border/50 bg-card/30 backdrop-blur-sm p-4 animate-slide-in-right">
-          <form onSubmit={handleSubmit} className="mx-auto max-w-3xl">
+        <div className="border-t border-border/50 bg-card/30 backdrop-blur-sm p-4">
+          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
             <div className="flex gap-2">
               <Textarea
+                ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Mesajınızı yazın..."
-                className="min-h-[60px] resize-none bg-background/50 border-border/50 focus:border-primary/50 transition-colors"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
+                onKeyDown={handleKeyDown}
+                placeholder="Mesajınızı yazın... (Enter: gönder, Shift+Enter: yeni satır)"
+                className="min-h-[60px] max-h-[200px] resize-none bg-background"
+                disabled={isTyping}
               />
               <Button 
                 type="submit" 
+                size="icon" 
+                className="h-[60px] w-[60px]"
                 disabled={!input.trim() || isTyping}
-                size="lg"
-                className="px-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200 hover:scale-105"
               >
-                <Send className="w-5 h-5" />
+                <Send className="h-5 w-5" />
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Verileriniz sadece tarayıcınızda saklanır, sunucuya gönderilmez.
+            </p>
           </form>
         </div>
       </div>
