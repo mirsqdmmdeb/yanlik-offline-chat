@@ -35,7 +35,7 @@ const NotFound = () => {
               404
             </h1>
             <h2 className="text-3xl font-semibold text-foreground">
-              Sayfa Bulunamadı
+              Yanlik Burada Bir Şey Bulamadı 😅
             </h2>
             <p className="text-lg text-muted-foreground max-w-md mx-auto">
               Aradığınız sayfa mevcut değil veya taşınmış olabilir. 
