@@ -245,6 +245,20 @@ const Index = () => {
               >
                 GitHub
               </a>
+              <span>·</span>
+              <button
+                onClick={() => navigate('/privacy')}
+                className="hover:text-primary transition-colors"
+              >
+                Gizlilik & KVKK
+              </button>
+              <span>·</span>
+              <button
+                onClick={() => navigate('/terms')}
+                className="hover:text-primary transition-colors"
+              >
+                Kullanım Şartları
+              </button>
             </div>
           </div>
           <p className="text-xs text-center mt-4 text-muted-foreground/70">
