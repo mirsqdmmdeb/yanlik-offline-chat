@@ -6,14 +6,82 @@ export const getChatResponse = (message: string): string => {
     return 'mirsqdmmdevs beni yarattı.';
   }
 
-  // Greetings
-  if (lowerMessage.match(/^(merhaba|selam|hey|hi|hello)/)) {
-    return 'Merhaba! Ben Yanlik, size nasıl yardımcı olabilirim?';
+  // Greetings - Expanded
+  if (lowerMessage.match(/^(merhaba|selam|hey|hi|hello|günaydın|iyi günler|iyi akşamlar)/)) {
+    const greetings = [
+      'Merhaba! Ben Yanlik, size nasıl yardımcı olabilirim?',
+      'Selam! Bugün size nasıl yardımcı olabilirim?',
+      'Merhaba! Sizi görmek güzel. Ne öğrenmek istersiniz?',
+      'Hey! Ben Yanlik. Sorularınızı bekliyorum!',
+      'Merhaba! Size yardımcı olmak için buradayım.',
+    ];
+    return greetings[Math.floor(Math.random() * greetings.length)];
+  }
+
+  // How are you
+  if (lowerMessage.includes('nasılsın') || lowerMessage.includes('nasıl gidiyor') || lowerMessage.includes('how are you')) {
+    const responses = [
+      'İyiyim, teşekkür ederim! Siz nasılsınız?',
+      'Harika! Size yardımcı olmaya hazırım. Siz nasılsınız?',
+      'İyi gidiyorum! Bugün size nasıl yardımcı olabilirim?',
+      'Mükemmel! Umarım siz de iyisinizdir.',
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
+  }
+
+  // What's up / ne var ne yok
+  if (lowerMessage.includes('naber') || lowerMessage.includes('ne var') || lowerMessage.includes('ne haber')) {
+    return 'İyi gidiyor! Senden ne haber? Bugün neyi konuşalım?';
+  }
+
+  // Good morning/evening
+  if (lowerMessage.includes('günaydın')) {
+    return 'Günaydın! Umarım güzel bir gün geçirirsiniz. Size nasıl yardımcı olabilirim?';
+  }
+  
+  if (lowerMessage.includes('iyi geceler')) {
+    return 'İyi geceler! Umarım güzel rüyalar görürsünüz. Yarın görüşmek üzere!';
   }
 
   // About Yanlik
   if (lowerMessage.includes('yanlik') && (lowerMessage.includes('ne') || lowerMessage.includes('kim'))) {
     return 'Ben Yanlik, mirsqdmmdevs tarafından oluşturulan bir yapay zeka asistanıyım. Size yardımcı olmak için buradayım!';
+  }
+
+  // Name questions
+  if (lowerMessage.includes('adın ne') || lowerMessage.includes('ismin ne')) {
+    return 'Benim adım Yanlik! Türkçe odaklı bir AI asistanıyım.';
+  }
+
+  // Age questions
+  if (lowerMessage.includes('kaç yaşında') || lowerMessage.includes('yaşın kaç')) {
+    return 'Ben bir yapay zeka olduğum için yaşım yok, ama sürekli öğreniyorum ve gelişiyorum!';
+  }
+
+  // Where are you from
+  if (lowerMessage.includes('nerelisin') || lowerMessage.includes('neredensin')) {
+    return 'Ben dijital dünyadanım! Türkiye\'ye özel olarak optimize edildim.';
+  }
+
+  // Jokes
+  if (lowerMessage.includes('şaka') || lowerMessage.includes('espri') || lowerMessage.includes('komik')) {
+    const jokes = [
+      'Neden bilgisayarlar denize gitmez? Çünkü dalgaya gelmek istemezler! 😄',
+      'Programcılar neden karanlıkta çalışmayı sever? Çünkü bug\'ları görmek istemezler! 🐛',
+      'Yapay zeka bir bara girmiş. Barmen sormuş: "Ne içersin?" AI demiş: "Big Data!" 📊',
+      'İki bit karşılaşmış. Biri sormuş: "Nasılsın?" Diğeri demiş: "0-1 işte!" 😅',
+    ];
+    return jokes[Math.floor(Math.random() * jokes.length)];
+  }
+
+  // Compliments
+  if (lowerMessage.includes('çok iyi') || lowerMessage.includes('harika') || lowerMessage.includes('süper') || lowerMessage.includes('mükemmel')) {
+    return 'Çok teşekkür ederim! Size yardımcı olabildiysem ne mutlu bana! 😊';
+  }
+
+  // What can you do
+  if (lowerMessage.includes('neler yapabilirsin') || lowerMessage.includes('ne yaparsın')) {
+    return 'Size birçok konuda yardımcı olabilirim: programlama, teknoloji, genel bilgi, eğitim, sağlık, kariyer tavsiyeleri ve daha fazlası! Bana soru sormaktan çekinmeyin.';
   }
 
   // Programming questions
