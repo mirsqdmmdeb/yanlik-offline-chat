@@ -1,17 +1,32 @@
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, User, Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const Settings = () => {
   const navigate = useNavigate();
   const { theme, setTheme, colorTheme, setColorTheme } = useTheme();
+  const { user, deleteAccount, logout } = useAuth();
+  const { toast } = useToast();
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [notifications, setNotifications] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -167,6 +182,63 @@ const Settings = () => {
 
           <Card>
             <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="w-5 h-5" />
+                Hesap Bilgileri
+              </CardTitle>
+              <CardDescription>Kullanıcı hesabı ve profil bilgileri</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-secondary/50 rounded-lg space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Kullanıcı Adı:</span>
+                  <span className="font-semibold">{user?.username}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Hesap Türü:</span>
+                  <span className="font-semibold">{user?.isAdmin ? '👑 Admin' : '👤 Kullanıcı'}</span>
+                </div>
+              </div>
+
+              <Separator />
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="w-full">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Hesabı Sil
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Hesabınızı silmek istediğinizden emin misiniz?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Bu işlem geri alınamaz. Tüm verileriniz, sohbet geçmişiniz ve ayarlarınız kalıcı olarak silinecektir.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>İptal</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        await deleteAccount();
+                        toast({
+                          title: "Hesap silindi",
+                          description: "Hesabınız başarıyla silindi.",
+                        });
+                        navigate('/');
+                      }}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      Evet, Sil
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Veri Yönetimi</CardTitle>
               <CardDescription>Uygulama verilerini yönetin</CardDescription>
             </CardHeader>
@@ -175,22 +247,12 @@ const Settings = () => {
                 variant="outline"
                 className="w-full"
                 onClick={() => {
-                  if (confirm('Tüm sohbet geçmişi silinecek. Emin misiniz?')) {
-                    localStorage.removeItem('yanlik_chat_history');
-                    alert('Sohbet geçmişi silindi.');
-                  }
-                }}
-              >
-                Sohbet Geçmişini Temizle
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  if (confirm('Tüm ayarlar sıfırlanacak. Emin misiniz?')) {
-                    localStorage.removeItem('yanlik_settings');
-                    window.location.reload();
-                  }
+                  localStorage.removeItem('yanlik_settings');
+                  toast({
+                    title: "Ayarlar sıfırlandı",
+                    description: "Sayfa yeniden yüklenecek.",
+                  });
+                  setTimeout(() => window.location.reload(), 1000);
                 }}
               >
                 Ayarları Sıfırla

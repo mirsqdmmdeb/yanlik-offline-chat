@@ -1,17 +1,21 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useChat } from '@/contexts/ChatContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Users, MessageSquare, Settings, Database } from 'lucide-react';
+import { ArrowLeft, Users, MessageSquare, Settings, Database, Activity } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { dbManager } from '@/lib/indexedDB';
 
 const Admin = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { conversations } = useChat();
   const [stats, setStats] = useState({
     totalMessages: 0,
-    totalUsers: 1,
-    storageUsed: '0 KB',
+    totalUsers: 0,
+    totalConversations: 0,
+    storageEstimate: '0 KB',
     uptime: '100%'
   });
 
@@ -21,25 +25,39 @@ const Admin = () => {
       return;
     }
 
-    // Calculate stats from localStorage
-    const chatHistory = localStorage.getItem('yanlik_chat_history');
-    const messages = chatHistory ? JSON.parse(chatHistory).length : 0;
-    
-    let totalSize = 0;
-    for (let key in localStorage) {
-      if (key.startsWith('yanlik_')) {
-        totalSize += localStorage[key].length;
-      }
-    }
-    const sizeInKB = (totalSize / 1024).toFixed(2);
+    const calculateStats = async () => {
+      // Get all users
+      const users = await dbManager.getAllUsers();
+      
+      // Get all conversations
+      const allConversations = await dbManager.getAllConversations();
+      
+      // Count total messages
+      const totalMessages = allConversations.reduce((sum, conv) => sum + conv.messages.length, 0);
 
-    setStats({
-      totalMessages: messages,
-      totalUsers: 1,
-      storageUsed: `${sizeInKB} KB`,
-      uptime: '100%'
-    });
-  }, [user, navigate]);
+      // Estimate storage (rough calculation)
+      let totalSize = 0;
+      for (let key in localStorage) {
+        if (key.startsWith('yanlik_')) {
+          totalSize += localStorage[key].length;
+        }
+      }
+      
+      // Add IndexedDB estimate (rough)
+      totalSize += JSON.stringify(allConversations).length + JSON.stringify(users).length;
+      const sizeInKB = (totalSize / 1024).toFixed(2);
+
+      setStats({
+        totalMessages,
+        totalUsers: users.length,
+        totalConversations: allConversations.length,
+        storageEstimate: `${sizeInKB} KB`,
+        uptime: '100%'
+      });
+    };
+
+    calculateStats();
+  }, [user, navigate, conversations]);
 
   if (!user?.isAdmin) return null;
 
@@ -97,29 +115,30 @@ const Admin = () => {
 
           <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-scale-in" style={{ animationDelay: '0.2s' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Depolama Kullanımı</CardTitle>
+              <CardTitle className="text-sm font-medium">Toplam Sohbet</CardTitle>
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
-                <Database className="h-5 w-5 text-white" />
+                <Activity className="h-5 w-5 text-white" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">{stats.storageUsed}</div>
-              <p className="text-xs text-muted-foreground mt-1">Yerel depolama</p>
+              <div className="text-3xl font-bold bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">{stats.totalConversations}</div>
+              <p className="text-xs text-muted-foreground mt-1">Aktif sohbet sayısı</p>
             </CardContent>
           </Card>
 
           <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-scale-in" style={{ animationDelay: '0.3s' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Çalışma Süresi</CardTitle>
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <Settings className="h-5 w-5 text-white" />
+              <CardTitle className="text-sm font-medium">Depolama Tahmini</CardTitle>
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
+                <Database className="h-5 w-5 text-white" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">{stats.uptime}</div>
-              <p className="text-xs text-muted-foreground mt-1">Sistem aktif</p>
+              <div className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-rose-500 bg-clip-text text-transparent">{stats.storageEstimate}</div>
+              <p className="text-xs text-muted-foreground mt-1">IndexedDB + LocalStorage</p>
             </CardContent>
           </Card>
+
         </div>
 
         <Card className="mt-6 bg-card/80 backdrop-blur-sm border-border/50 animate-fade-in-up">
@@ -138,7 +157,7 @@ const Admin = () => {
               </div>
               <div className="flex justify-between items-center p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
                 <span className="text-muted-foreground">Platform:</span>
-                <span className="font-semibold">Web (Offline)</span>
+                <span className="font-semibold">Web (IndexedDB)</span>
               </div>
               <div className="flex justify-between items-center p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
                 <span className="text-muted-foreground">Durum:</span>
@@ -167,9 +186,17 @@ const Admin = () => {
             <Button
               variant="outline"
               className="w-full h-12 border-2 hover:bg-destructive/10 hover:border-destructive transition-all"
-              onClick={() => {
-                if (confirm('Tüm sistem verileri silinecek. Emin misiniz?')) {
+              onClick={async () => {
+                if (confirm('Tüm sistem verileri (IndexedDB ve LocalStorage) silinecek. Emin misiniz?')) {
+                  // Clear localStorage
                   localStorage.clear();
+                  
+                  // Clear IndexedDB
+                  const dbs = await indexedDB.databases();
+                  dbs.forEach(db => {
+                    if (db.name) indexedDB.deleteDatabase(db.name);
+                  });
+
                   alert('Tüm veriler silindi. Sayfa yeniden yüklenecek.');
                   window.location.reload();
                 }
@@ -181,19 +208,27 @@ const Admin = () => {
             <Button
               variant="outline"
               className="w-full h-12 border-2 hover:bg-primary/10 hover:border-primary transition-all"
-              onClick={() => {
+              onClick={async () => {
+                const allUsers = await dbManager.getAllUsers();
+                const allConversations = await dbManager.getAllConversations();
+                
                 const data = {
-                  user: localStorage.getItem('yanlik_user'),
-                  settings: localStorage.getItem('yanlik_settings'),
-                  theme: localStorage.getItem('yanlik_theme'),
-                  chatHistory: localStorage.getItem('yanlik_chat_history')
+                  timestamp: new Date().toISOString(),
+                  users: allUsers,
+                  conversations: allConversations,
+                  localStorage: {
+                    settings: localStorage.getItem('yanlik_settings'),
+                    theme: localStorage.getItem('yanlik_theme'),
+                  }
                 };
+                
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = `yanlik-backup-${Date.now()}.json`;
                 a.click();
+                URL.revokeObjectURL(url);
               }}
             >
               <ArrowLeft className="mr-2 h-5 w-5 rotate-180" />

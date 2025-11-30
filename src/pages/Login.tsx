@@ -5,21 +5,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, Lock, User, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const { login } = useAuth();
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [signupUsername, setSignupUsername] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupPasswordConfirm, setSignupPasswordConfirm] = useState('');
+  const { login, signup } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(username, password);
+    const result = await login(loginUsername, loginPassword);
     
-    if (success) {
+    if (result.success) {
       toast({
         title: "Giriş başarılı!",
         description: "Yanlik'e hoş geldiniz.",
@@ -28,7 +32,36 @@ const Login = () => {
     } else {
       toast({
         title: "Giriş başarısız",
-        description: "Kullanıcı adı veya şifre hatalı.",
+        description: result.error || "Kullanıcı adı veya şifre hatalı.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (signupPassword !== signupPasswordConfirm) {
+      toast({
+        title: "Şifreler uyuşmuyor",
+        description: "Lütfen aynı şifreyi iki kez girin.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const result = await signup(signupUsername, signupPassword);
+    
+    if (result.success) {
+      toast({
+        title: "Kayıt başarılı!",
+        description: "Hesabınız oluşturuldu. Hoş geldiniz!",
+      });
+      navigate('/chat');
+    } else {
+      toast({
+        title: "Kayıt başarısız",
+        description: result.error || "Bir hata oluştu.",
         variant: "destructive",
       });
     }
@@ -67,57 +100,129 @@ const Login = () => {
         </CardHeader>
         
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              <Label htmlFor="username" className="text-sm font-medium">
-                Kullanıcı Adı
-              </Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Kullanıcı adınızı girin"
-                  className="pl-10 h-12 bg-background/50 border-border/50 focus:border-primary/50 transition-all"
-                  required
-                />
-              </div>
-            </div>
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="login">Giriş Yap</TabsTrigger>
+              <TabsTrigger value="signup">Kayıt Ol</TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              <Label htmlFor="password" className="text-sm font-medium">
-                Şifre
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Şifrenizi girin"
-                  className="pl-10 h-12 bg-background/50 border-border/50 focus:border-primary/50 transition-all"
-                  required
-                />
-              </div>
-            </div>
+            <TabsContent value="login">
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div className="space-y-2 animate-fade-in">
+                  <Label htmlFor="login-username" className="text-sm font-medium">
+                    Kullanıcı Adı
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="login-username"
+                      type="text"
+                      value={loginUsername}
+                      onChange={(e) => setLoginUsername(e.target.value)}
+                      placeholder="Kullanıcı adınızı girin"
+                      className="pl-10 h-12 bg-background/50 border-border/50 focus:border-primary/50 transition-all"
+                      required
+                    />
+                  </div>
+                </div>
 
-            <Button 
-              type="submit" 
-              className="w-full h-12 text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 animate-fade-in"
-              style={{ animationDelay: '0.3s' }}
-            >
-              Giriş Yap
-            </Button>
-          </form>
+                <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                  <Label htmlFor="login-password" className="text-sm font-medium">
+                    Şifre
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="login-password"
+                      type="password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="Şifrenizi girin"
+                      className="pl-10 h-12 bg-background/50 border-border/50 focus:border-primary/50 transition-all"
+                      required
+                    />
+                  </div>
+                </div>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: '0.4s' }}>
-            <p>
-              Demo: <span className="font-semibold text-foreground">mirsqdmmdevs</span> / <span className="font-semibold text-foreground">no1hastasi</span>
-            </p>
-          </div>
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 animate-fade-in"
+                  style={{ animationDelay: '0.2s' }}
+                >
+                  Giriş Yap
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="signup">
+              <form onSubmit={handleSignup} className="space-y-6">
+                <div className="space-y-2 animate-fade-in">
+                  <Label htmlFor="signup-username" className="text-sm font-medium">
+                    Kullanıcı Adı
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="signup-username"
+                      type="text"
+                      value={signupUsername}
+                      onChange={(e) => setSignupUsername(e.target.value)}
+                      placeholder="En az 3 karakter"
+                      className="pl-10 h-12 bg-background/50 border-border/50 focus:border-primary/50 transition-all"
+                      required
+                      minLength={3}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                  <Label htmlFor="signup-password" className="text-sm font-medium">
+                    Şifre
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      placeholder="En az 6 karakter"
+                      className="pl-10 h-12 bg-background/50 border-border/50 focus:border-primary/50 transition-all"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                  <Label htmlFor="signup-password-confirm" className="text-sm font-medium">
+                    Şifre Tekrar
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      id="signup-password-confirm"
+                      type="password"
+                      value={signupPasswordConfirm}
+                      onChange={(e) => setSignupPasswordConfirm(e.target.value)}
+                      placeholder="Şifrenizi tekrar girin"
+                      className="pl-10 h-12 bg-background/50 border-border/50 focus:border-primary/50 transition-all"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 animate-fade-in"
+                  style={{ animationDelay: '0.3s' }}
+                >
+                  Kayıt Ol
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
