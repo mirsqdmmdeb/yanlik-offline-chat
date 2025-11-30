@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { dbManager, IDBConversation, IDBMessage } from '@/lib/indexedDB';
+import { useAuth } from './AuthContext';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -18,72 +20,108 @@ interface ChatContextType {
   conversations: Conversation[];
   currentConversationId: string | null;
   currentMessages: Message[];
-  createConversation: () => string;
-  deleteConversation: (id: string) => void;
-  renameConversation: (id: string, title: string) => void;
+  createConversation: () => Promise<string>;
+  deleteConversation: (id: string) => Promise<void>;
+  renameConversation: (id: string, title: string) => Promise<void>;
   switchConversation: (id: string) => void;
-  addMessage: (message: Message) => void;
-  editMessage: (index: number, newContent: string) => void;
+  addMessage: (message: Message) => Promise<void>;
+  editMessage: (index: number, newContent: string) => Promise<void>;
   regenerateMessage: (index: number) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
-  const [conversations, setConversations] = useState<Conversation[]>(() => {
-    const stored = localStorage.getItem('yanlik_conversations');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return parsed.map((c: any) => ({
+  const { user } = useAuth();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    const loadConversations = async () => {
+      if (!user) {
+        setConversations([]);
+        setCurrentConversationId(null);
+        setIsInitialized(true);
+        return;
+      }
+
+      const dbConversations = await dbManager.getConversationsByUser(user.id);
+      const mapped = dbConversations.map(c => ({
         ...c,
         createdAt: new Date(c.createdAt),
         updatedAt: new Date(c.updatedAt),
-        messages: c.messages.map((m: any) => ({
+        messages: c.messages.map(m => ({
           ...m,
           timestamp: new Date(m.timestamp)
         }))
       }));
-    }
-    return [];
-  });
+      
+      setConversations(mapped);
+      
+      // Set current conversation from localStorage
+      const storedCurrentId = localStorage.getItem(`yanlik_current_conversation_${user.id}`);
+      if (storedCurrentId && mapped.find(c => c.id === storedCurrentId)) {
+        setCurrentConversationId(storedCurrentId);
+      } else if (mapped.length > 0) {
+        setCurrentConversationId(mapped[0].id);
+      }
 
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(() => {
-    return localStorage.getItem('yanlik_current_conversation');
-  });
+      setIsInitialized(true);
+    };
+
+    loadConversations();
+  }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('yanlik_conversations', JSON.stringify(conversations));
-  }, [conversations]);
-
-  useEffect(() => {
-    if (currentConversationId) {
-      localStorage.setItem('yanlik_current_conversation', currentConversationId);
+    if (currentConversationId && user) {
+      localStorage.setItem(`yanlik_current_conversation_${user.id}`, currentConversationId);
     }
-  }, [currentConversationId]);
+  }, [currentConversationId, user]);
 
-  const createConversation = () => {
+  const createConversation = async (): Promise<string> => {
+    if (!user) return '';
+
     const id = `conv_${Date.now()}`;
-    const newConv: Conversation = {
+    const newConv: IDBConversation = {
       id,
       title: 'Yeni Sohbet',
       messages: [{ role: 'assistant', content: 'Merhaba! Ben Yanlik. Size nasıl yardımcı olabilirim?', timestamp: new Date() }],
       createdAt: new Date(),
       updatedAt: new Date(),
+      userId: user.id
     };
-    setConversations(prev => [newConv, ...prev]);
+
+    await dbManager.addConversation(newConv);
+    setConversations(prev => [newConv as Conversation, ...prev]);
     setCurrentConversationId(id);
     return id;
   };
 
-  const deleteConversation = (id: string) => {
+  const deleteConversation = async (id: string): Promise<void> => {
+    await dbManager.deleteConversation(id);
     setConversations(prev => prev.filter(c => c.id !== id));
+    
     if (currentConversationId === id) {
       const remaining = conversations.filter(c => c.id !== id);
       setCurrentConversationId(remaining[0]?.id || null);
     }
   };
 
-  const renameConversation = (id: string, title: string) => {
+  const renameConversation = async (id: string, title: string): Promise<void> => {
+    if (!user) return;
+
+    const conv = conversations.find(c => c.id === id);
+    if (!conv) return;
+
+    const updated: IDBConversation = {
+      ...conv,
+      title,
+      updatedAt: new Date(),
+      userId: user.id
+    };
+
+    await dbManager.updateConversation(updated);
     setConversations(prev => prev.map(c => 
       c.id === id ? { ...c, title, updatedAt: new Date() } : c
     ));
@@ -93,17 +131,29 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     setCurrentConversationId(id);
   };
 
-  const addMessage = (message: Message) => {
-    if (!currentConversationId) return;
+  const addMessage = async (message: Message): Promise<void> => {
+    if (!currentConversationId || !user) return;
+    
+    const conv = conversations.find(c => c.id === currentConversationId);
+    if (!conv) return;
+
+    const newMessages = [...conv.messages, message];
+    const title = conv.title === 'Yeni Sohbet' && newMessages.length > 2
+      ? newMessages[1].content.slice(0, 50) + (newMessages[1].content.length > 50 ? '...' : '')
+      : conv.title;
+
+    const updated: IDBConversation = {
+      ...conv,
+      messages: newMessages as IDBMessage[],
+      title,
+      updatedAt: new Date(),
+      userId: user.id
+    };
+
+    await dbManager.updateConversation(updated);
     
     setConversations(prev => prev.map(c => {
       if (c.id !== currentConversationId) return c;
-      
-      const newMessages = [...c.messages, message];
-      const title = c.title === 'Yeni Sohbet' && newMessages.length > 2
-        ? newMessages[1].content.slice(0, 50) + (newMessages[1].content.length > 50 ? '...' : '')
-        : c.title;
-      
       return {
         ...c,
         messages: newMessages,
@@ -113,15 +163,26 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
-  const editMessage = (index: number, newContent: string) => {
-    if (!currentConversationId) return;
+  const editMessage = async (index: number, newContent: string): Promise<void> => {
+    if (!currentConversationId || !user) return;
+    
+    const conv = conversations.find(c => c.id === currentConversationId);
+    if (!conv) return;
+
+    const newMessages = [...conv.messages];
+    newMessages[index] = { ...newMessages[index], content: newContent };
+
+    const updated: IDBConversation = {
+      ...conv,
+      messages: newMessages as IDBMessage[],
+      updatedAt: new Date(),
+      userId: user.id
+    };
+
+    await dbManager.updateConversation(updated);
     
     setConversations(prev => prev.map(c => {
       if (c.id !== currentConversationId) return c;
-      
-      const newMessages = [...c.messages];
-      newMessages[index] = { ...newMessages[index], content: newContent };
-      
       return { ...c, messages: newMessages, updatedAt: new Date() };
     }));
   };
@@ -132,6 +193,10 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const currentMessages = conversations.find(c => c.id === currentConversationId)?.messages || [];
+
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
     <ChatContext.Provider value={{
