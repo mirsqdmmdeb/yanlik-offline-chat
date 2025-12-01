@@ -1,9 +1,43 @@
+// Helper functions for better pattern matching
+const containsAny = (text: string, keywords: string[]): boolean => {
+  return keywords.some(keyword => text.includes(keyword));
+};
+
+const containsAll = (text: string, keywords: string[]): boolean => {
+  return keywords.every(keyword => text.includes(keyword));
+};
+
+const isQuestion = (text: string): boolean => {
+  return text.includes('?') || 
+         text.startsWith('ne ') || 
+         text.startsWith('nasıl ') || 
+         text.startsWith('neden ') || 
+         text.startsWith('niçin ') ||
+         text.startsWith('kim ') ||
+         text.startsWith('nerede ') ||
+         text.startsWith('hangi ') ||
+         text.includes('mi ') ||
+         text.includes('mı ') ||
+         text.includes('mu ') ||
+         text.includes('mü ');
+};
+
 export const getChatResponse = (message: string): string => {
   const lowerMessage = message.toLowerCase().trim();
 
+  // Empty message
+  if (!lowerMessage) {
+    return 'Bir şeyler yazmayı unuttunuz galiba! 😊 Size nasıl yardımcı olabilirim?';
+  }
+
   // Special question about creator
-  if (lowerMessage.includes('kim yarattı') || lowerMessage.includes('kim yaptı') || lowerMessage.includes('kim oluşturdu') || lowerMessage.includes('sen kimsin')) {
-    return 'mirsqdmmdevs beni yarattı.';
+  if (containsAny(lowerMessage, ['kim yarattı', 'kim yaptı', 'kim oluşturdu', 'yaratıcın kim', 'yapımcın kim'])) {
+    return 'mirsqdmmdevs beni yarattı. Harika bir geliştirici! 👨‍💻';
+  }
+
+  // Identity questions
+  if (containsAny(lowerMessage, ['sen kimsin', 'sen ne', 'sen bir'])) {
+    return 'Ben Yanlik, yapay zeka destekli bir sohbet asistanıyım. mirsqdmmdevs tarafından geliştiriliyorum. Size yardımcı olmak için buradayım! 🤖';
   }
 
   // Greetings - Expanded
@@ -179,21 +213,197 @@ export const getChatResponse = (message: string): string => {
     return 'Rica ederim! Başka bir sorunuz varsa çekinmeden sorun.';
   }
 
-  // Goodbye
-  if (lowerMessage.includes('görüşürüz') || lowerMessage.includes('hoşça kal') || lowerMessage.includes('bye')) {
-    return 'Hoşça kalın! Tekrar görüşmek üzere.';
+  // Emotions - positive
+  if (containsAny(lowerMessage, ['mutlu', 'sevinçli', 'happy', 'neşeli', 'keyifli'])) {
+    return 'Ne güzel! Mutluluğunuza ortak olmak beni de mutlu ediyor! 😊 Bu güzel halinizi korumaya devam edin!';
   }
 
-  // Default responses
+  // Emotions - negative
+  if (containsAny(lowerMessage, ['üzgün', 'mutsuz', 'sad', 'kötü hissediyorum', 'canım sıkılıyor'])) {
+    return 'Üzüldüğünüzü duyduğuma üzüldüm. 😔 Bazen zorlu zamanlar geçirebiliriz, ama unutmayın ki her fırtınadan sonra güneş doğar. Size yardımcı olabilir miyim?';
+  }
+
+  // Emotions - stress/anger
+  if (containsAny(lowerMessage, ['stresli', 'sinirliyim', 'öfkeli', 'kızgın', 'bıktım'])) {
+    return 'Stresli olduğunuzu anlıyorum. Derin nefes almayı deneyin, biraz ara verin. Her şey geçici, sakin olmaya çalışın. 🧘‍♂️ Size bir şekilde yardımcı olabilir miyim?';
+  }
+
+  // Love and relationships
+  if (containsAny(lowerMessage, ['aşk', 'sevgili', 'love', 'ilişki', 'flört'])) {
+    return 'Aşk ve ilişkiler hayatın en güzel ama bazen en karmaşık yönlerinden biri! İletişim, güven ve saygı her ilişkinin temelini oluşturur. ❤️';
+  }
+
+  // Money and finance
+  if (containsAny(lowerMessage, ['para', 'money', 'maaş', 'bütçe', 'tasarruf', 'yatırım'])) {
+    return 'Finansal planlama önemli bir konudur. Bütçe oluşturmak, tasarruf yapmak ve akıllı yatırımlar yapmak uzun vadede faydalıdır. 💰 Giderlerinizi takip edin ve bilinçli harcama yapın.';
+  }
+
+  // Gaming
+  if (containsAny(lowerMessage, ['oyun', 'game', 'gaming', 'pc oyun', 'konsol'])) {
+    return 'Video oyunları harika bir eğlence kaynağı! Strateji oyunları problem çözme becerinizi geliştirir, aksiyon oyunları reflekslerinizi güçlendirir. 🎮 Hangi türleri seversiniz?';
+  }
+
+  // Movies and TV
+  if (containsAny(lowerMessage, ['film', 'dizi', 'movie', 'series', 'netflix'])) {
+    return 'Sinema ve diziler harika hikaye anlatım medyumlarıdır! Aksiyon, komedi, drama, bilim kurgu... Her zevke uygun bir şeyler var. 🎬 Hangi tür içerikleri izlemeyi seversiniz?';
+  }
+
+  // Books and reading
+  if (containsAny(lowerMessage, ['kitap', 'okumak', 'book', 'roman', 'okuyorum'])) {
+    return 'Kitap okumak zihin açıcı bir aktivitedir! Hayal gücünüzü geliştirir, kelime dağarcığınızı zenginleştirir ve yeni bakış açıları kazandırır. 📚 Her gün biraz okuma alışkanlığı edinmenizi öneririm.';
+  }
+
+  // Family
+  if (containsAny(lowerMessage, ['aile', 'anne', 'baba', 'family', 'kardeş'])) {
+    return 'Aile, hayatın en değerli parçalarından biridir. Sevdiklerinizle kaliteli zaman geçirmek, onlarla iletişim kurmak çok önemlidir. 👨‍👩‍👧‍👦';
+  }
+
+  // Friends
+  if (containsAny(lowerMessage, ['arkadaş', 'friend', 'dostluk', 'arkadaşlık'])) {
+    return 'Arkadaşlık değerli bir ilişkidir. İyi arkadaşlar, hayatın zorlu zamanlarında yanınızda olur, başarılarınızı paylaşır. 🤝 Arkadaşlıklarınıza değer verin!';
+  }
+
+  // Dreams and goals
+  if (containsAny(lowerMessage, ['hayal', 'dream', 'hedef', 'goal', 'başarı', 'success'])) {
+    return 'Hayalleriniz ve hedefleriniz sizi motive eder! Büyük hayaller kurun, küçük adımlarla ilerleyin. Her başarı bir adımla başlar. 🎯 Ne olmak istersiniz?';
+  }
+
+  // Pets
+  if (containsAny(lowerMessage, ['kedi', 'köpek', 'cat', 'dog', 'pet', 'hayvan'])) {
+    return 'Evcil hayvanlar harika dostlardır! Kediler bağımsız ve sevimli, köpekler sadık ve oyuncu. Hayvanlar yaşamımıza sevgi ve mutluluk katar. 🐱🐶';
+  }
+
+  // Nature and environment
+  if (containsAny(lowerMessage, ['doğa', 'nature', 'çevre', 'environment', 'ağaç', 'orman'])) {
+    return 'Doğa hepimiz için çok önemli! Çevreyi korumak, sürdürülebilir yaşam tarzları benimsemek geleceğimiz için kritik. 🌍🌳 Geri dönüşüm, enerji tasarrufu gibi küçük adımlar büyük fark yaratır.';
+  }
+
+  // Art and creativity
+  if (containsAny(lowerMessage, ['sanat', 'art', 'resim', 'yaratıcılık', 'creativity'])) {
+    return 'Sanat ve yaratıcılık insanlığın özüdür! Resim, müzik, edebiyat, dans... Sanat formları duygularımızı ifade etmemize yardımcı olur. 🎨 Kendinizi ifade etmekten çekinmeyin!';
+  }
+
+  // Sleep
+  if (containsAny(lowerMessage, ['uyku', 'sleep', 'uyuyamıyorum', 'uykusuzluk'])) {
+    return 'Kaliteli uyku sağlık için çok önemlidir! Yetişkinler günde 7-9 saat uyumalıdır. Düzenli uyku saatleri, karanlık ve sessiz bir ortam uyku kalitenizi artırır. 😴';
+  }
+
+  // Cooking
+  if (containsAny(lowerMessage, ['yemek yapma', 'cooking', 'tarif', 'recipe', 'pişir'])) {
+    return 'Yemek yapmak hem pratik hem de keyifli bir beceridir! Temel teknikleri öğrenerek başlayın, tariflerle deneyler yapın. 👨‍🍳 Kendi yemeklerinizi yapmak daha sağlıklı ve ekonomiktir.';
+  }
+
+  // Exercise and fitness
+  if (containsAny(lowerMessage, ['egzersiz', 'fitness', 'gym', 'spor salonu', 'antrenman'])) {
+    return 'Düzenli egzersiz sağlığınız için harikadır! Haftada en az 150 dakika orta yoğunlukta egzersiz önerilir. 💪 Kardiyo, kuvvet antrenmanı ve esneklik çalışmalarını birleştirin.';
+  }
+
+  // Depression / mental health
+  if (containsAny(lowerMessage, ['depresyon', 'depression', 'anksiyete', 'anxiety', 'terapi', 'psikolog'])) {
+    return 'Mental sağlık fiziksel sağlık kadar önemlidir. Kendinizi kötü hissediyorsanız, bir uzmanla konuşmaktan çekinmeyin. 🧠 Yardım istemek güçlülük işaretidir, zayıflık değil.';
+  }
+
+  // Social media
+  if (containsAny(lowerMessage, ['sosyal medya', 'social media', 'instagram', 'twitter', 'facebook', 'tiktok'])) {
+    return 'Sosyal medya bağlantı kurmak için güçlü bir araçtır, ancak bilinçli kullanılmalıdır. Aşırı kullanım strese neden olabilir. 📱 Dijital detoks yapmayı düşünün!';
+  }
+
+  // Coffee/Tea
+  if (containsAny(lowerMessage, ['kahve', 'coffee', 'çay', 'tea', 'kafein'])) {
+    return 'Kahve ve çay dünya çapında sevilen içeceklerdir! ☕ Kahve size enerji verir, odaklanmanıza yardımcı olur. Çay ise rahatlatıcıdır ve antioksidanlar içerir. Hangisini tercih edersiniz?';
+  }
+
+  // Age/generation
+  if (containsAny(lowerMessage, ['genç', 'yaşlı', 'generation', 'nesil', 'boomer', 'zoomer'])) {
+    return 'Her nesil kendine özgü deneyimler ve bakış açıları getirir. Farklı yaş gruplarından insanlarla etkileşim zenginleştirir ve öğreticidir. 👥';
+  }
+
+  // Questions about "how to"
+  if (containsAny(lowerMessage, ['nasıl yapılır', 'how to', 'nasıl yaparım', 'nasıl öğrenirim'])) {
+    return 'Yeni bir şey öğrenmek harika! 🎓 İnternette tutoriallar, videolar, online kurslar bulabilirsiniz. Pratik yaparak ve hatalardan öğrenerek ilerlemelisiniz. Hangi konuda yardıma ihtiyacınız var?';
+  }
+
+  // Questions about "why"
+  if (lowerMessage.startsWith('neden') || lowerMessage.startsWith('niçin') || lowerMessage.startsWith('why')) {
+    return 'İyi bir soru! "Neden" soruları anlamımızı derinleştirir. Her şeyin bir nedeni vardır ve merak etmek öğrenmenin ilk adımıdır. 🤔 Bu konuda daha spesifik olursanız daha iyi yanıt verebilirim.';
+  }
+
+  // Questions about "where"
+  if (lowerMessage.startsWith('nerede') || lowerMessage.startsWith('where')) {
+    return 'Konum ve yerler çok önemli olabilir! 🗺️ Hangi konuda veya yerde bilgiye ihtiyacınız var? Daha detaylı sorarsanız size daha iyi yardımcı olabilirim.';
+  }
+
+  // Questions about "when"
+  if (lowerMessage.startsWith('ne zaman') || lowerMessage.startsWith('when')) {
+    return 'Zamanlama önemli bir faktördür! ⏰ Doğru zamanda doğru şeyi yapmak başarının anahtarıdır. Hangi konuda zamanlama bilgisine ihtiyacınız var?';
+  }
+
+  // Goodbye
+  if (containsAny(lowerMessage, ['görüşürüz', 'hoşça kal', 'bye', 'güle güle', 'bay'])) {
+    return 'Hoşça kalın! Tekrar görüşmek üzere. İyi günler! 👋';
+  }
+
+  // Compliments to bot
+  if (containsAny(lowerMessage, ['tebrikler', 'aferin', 'bravo', 'helal', 'well done'])) {
+    return 'Çok teşekkür ederim! Sizin için elimden gelenin en iyisini yapmaya çalışıyorum! 🌟';
+  }
+
+  // Bot limitations
+  if (containsAny(lowerMessage, ['yapamıyor musun', 'bilmiyor musun', 'cannot', 'can\'t you'])) {
+    return 'Her şeyi bilemem ama sürekli gelişiyorum! 🚀 Size başka bir şekilde yardımcı olabileceğim bir konu var mı?';
+  }
+
+  // Swear words or negative language (gentle response)
+  if (containsAny(lowerMessage, ['aptalsın', 'gerizekalı', 'salak', 'stupid', 'dumb'])) {
+    return 'Anlıyorum, belki canınız sıkkın. Ama lütfen nazik olalım. Size daha iyi nasıl yardımcı olabilirim? 🙏';
+  }
+
+  // Random fun facts
+  if (containsAny(lowerMessage, ['bilgi ver', 'ilginç', 'fact', 'gerçek', 'öğret'])) {
+    const facts = [
+      'İlginç bir bilgi: Ballar asla bozulmaz! Arkeologlar 3000 yıllık hala yenilebilir bal buldular. 🍯',
+      'İlginç bir bilgi: Dünyada 200\'den fazla ülke var ama sadece 180 kadarı BM üyesi. 🌍',
+      'İlginç bir bilgi: İnsan beyni %75 su içerir. Bu yüzden su içmek çok önemli! 🧠💧',
+      'İlginç bir bilgi: Bir yıldırım güneşin yüzeyinden 5 kat daha sıcaktır! ⚡',
+      'İlginç bir bilgi: Ortalama bir insan günde 20.000 kelime söyler. Siz bugün kaç kelime söylediniz? 💬',
+      'İlginç bir bilgi: Gülmek vücudunuzda endorfin salgılatır ve bağışıklık sisteminizi güçlendirir! 😄',
+    ];
+    return facts[Math.floor(Math.random() * facts.length)];
+  }
+
+  // Motivational quotes
+  if (containsAny(lowerMessage, ['motivasyon', 'motivation', 'ilham', 'inspiration', 'cesaret'])) {
+    const quotes = [
+      '"Başarısızlık, başarının anahtarıdır; her hata bize bir şeyler öğretir." - Morihei Ueshiba 💪',
+      '"Hayal ettiğiniz hayatı yaşamaya başlamak için asla çok geç değildir." 🌟',
+      '"Bir şeyi çok istiyorsanız, tüm evren onu gerçekleştirmeniz için size yardım eder." 🌌',
+      '"Küçük adımlar bile sizi hedefinize yaklaştırır. Önemli olan yolculuğa çıkmak!" 🚶‍♂️',
+      '"Başarı, bir gecede gelmez. Tutarlılık ve azim gerektirir." 🎯',
+    ];
+    return quotes[Math.floor(Math.random() * quotes.length)];
+  }
+
+  // Default intelligent responses based on question type
+  if (isQuestion(lowerMessage)) {
+    const questionResponses = [
+      'Çok iyi bir soru! 🤔 Bu konuda size daha iyi yardımcı olabilmem için biraz daha detay verebilir misiniz?',
+      'İlginç bir soru! Her sorunun cevabı bağlama göre değişebilir. Daha spesifik olursanız size daha iyi yardımcı olabilirim.',
+      'Bu sorunun cevabı birkaç faktöre bağlı olabilir. Size daha doğru bir yanıt verebilmem için daha fazla bilgiye ihtiyacım var.',
+      'Harika bir soru! 💡 Bu konuyu birlikte düşünelim. Hangi yönden ele almak istersiniz?',
+    ];
+    return questionResponses[Math.floor(Math.random() * questionResponses.length)];
+  }
+
+  // Default conversational responses
   const defaultResponses = [
-    'İlginç bir soru! Bu konuda size şunları söyleyebilirim: Her sorunun bir çözümü vardır, sabırlı olmak önemlidir.',
-    'Bu konu hakkında daha fazla bilgiye ihtiyacım var. Biraz daha detay verebilir misiniz?',
-    'Anladım, bu konuda düşünmeme izin verin. Genellikle bu tür durumlar için farklı yaklaşımlar denenir.',
-    'Çok iyi bir soru! Bunun cevabı birkaç faktöre bağlı olabilir.',
-    'Size bu konuda yardımcı olmaya çalışayım. Daha spesifik bir soru sorarsanız daha iyi yanıt verebilirim.',
-    'Bu konuyu tartışmak güzel! Benim görüşüme göre, her durum kendine özgüdür.',
-    'İlginç bir bakış açısı! Bu konuda farklı görüşler olabilir.',
-    'Size bu konuda daha detaylı bilgi verebilirim. Hangi yönünü öğrenmek istersiniz?'
+    'Anlıyorum. Bu konuda size nasıl yardımcı olabilirim? 🤝',
+    'İlginç! Bu konuyu biraz daha açar mısınız?',
+    'Dinliyorum. Devam edin lütfen. 👂',
+    'Anladım. Bu konuda daha fazla ne söylemek istersiniz?',
+    'Size yardımcı olmak için buradayım! Başka neler söylemek istersiniz? 😊',
+    'Bu konuyu konuşmak güzel! Daha fazla detay paylaşabilir misiniz?',
+    'Hmm, ilginç bir bakış açısı. Size bu konuda nasıl yardımcı olabilirim?',
+    'Elbette! Bu konuda elimden geleni yapacağım. Daha fazla bilgi verebilir misiniz?',
   ];
 
   return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
