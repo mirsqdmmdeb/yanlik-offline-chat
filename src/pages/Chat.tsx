@@ -1,16 +1,21 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getChatResponse } from '@/lib/chatResponses';
-import { LogOut, Settings, Menu, Info, Send, Sparkles, User, Bot, Trash2, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import { getAdvancedAIResponse } from '@/lib/advancedAI';
+import { LogOut, Settings, Menu, Info, Send, Sparkles, User, Bot, Trash2, Mic, MicOff, Volume2, VolumeX, Star, Search, Zap } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useVoiceChat } from '@/hooks/useVoiceChat';
+import { useFavorites } from '@/hooks/useFavorites';
 import { MessageRenderer } from '@/components/MessageRenderer';
+import { FavoritesPanel } from '@/components/FavoritesPanel';
+import { SearchDialog } from '@/components/SearchDialog';
+import { ThemeSelector } from '@/components/ThemeSelector';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -21,10 +26,12 @@ interface Message {
 const STORAGE_KEY = 'yanlik_chat_history';
 
 const PROMPT_SUGGESTIONS = [
-  'Yapay zeka hakkında bilgi ver',
-  'Trading stratejileri nelerdir?',
-  'React nasıl öğrenilir?',
-  'Yanlik nedir?'
+  'JavaScript closure nedir? Örnek ver',
+  'Trading stratejileri ve risk yönetimi',
+  'React ile modern web geliştirme',
+  '25 + 37 * 2 hesapla',
+  'Python ve JavaScript karşılaştır',
+  'Kripto para yatırım rehberi'
 ];
 
 const Chat = () => {
@@ -32,12 +39,33 @@ const Chat = () => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(false);
+  const [useAdvancedAI, setUseAdvancedAI] = useState(true);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isListening, isSpeaking, startListening, stopListening, speak, stopSpeaking } = useVoiceChat();
+  const { addFavorite, isFavorite } = useFavorites();
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyboard = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        setShowFavorites(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyboard);
+    return () => window.removeEventListener('keydown', handleKeyboard);
+  }, []);
 
   // Load messages from localStorage
   useEffect(() => {
@@ -53,11 +81,10 @@ const Chat = () => {
         console.error('Failed to load chat history', e);
       }
     } else {
-      // Initial welcome message
       setMessages([
         { 
           role: 'assistant', 
-          content: 'Merhaba! Ben Yanlik, tarayıcıda çalışan yapay zeka asistanınız. Size nasıl yardımcı olabilirim?', 
+          content: '## 👋 Merhaba! Ben Yanlik\n\nGelişmiş yapay zeka asistanınız. Tamamen tarayıcınızda çalışıyorum - internet bağlantısı veya API gerekmez!\n\n**Neler yapabilirim:**\n- 💻 Programlama (JavaScript, Python, React...)\n- 📈 Trading ve yatırım stratejileri\n- 🧮 Hesaplama (matematiksel işlemler)\n- 🔍 Karşılaştırma ve analiz\n- 📚 Genel bilgi ve eğitim\n\n*Ctrl+K ile arama, Ctrl+F ile favoriler*', 
           timestamp: new Date() 
         }
       ]);
@@ -84,24 +111,35 @@ const Chat = () => {
     if (!input.trim() || isTyping) return;
 
     const userMessage: Message = { role: 'user', content: input, timestamp: new Date() };
+    const currentInput = input;
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
 
-    // Focus back to input
     setTimeout(() => inputRef.current?.focus(), 100);
 
+    // Simulate thinking time based on message complexity
+    const thinkingTime = Math.min(500 + currentInput.length * 5 + Math.random() * 800, 2000);
+
     setTimeout(() => {
-      const response = getChatResponse(input);
+      // Get conversation history for context
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      
+      // Use advanced AI if enabled, otherwise fallback to basic
+      const response = useAdvancedAI 
+        ? getAdvancedAIResponse(currentInput, history)
+        : getChatResponse(currentInput);
+      
       const assistantMessage: Message = { role: 'assistant', content: response, timestamp: new Date() };
       setMessages(prev => [...prev, assistantMessage]);
       setIsTyping(false);
       
-      // Auto speak response if enabled
       if (autoSpeak) {
-        speak(response);
+        // Strip markdown for speech
+        const cleanText = response.replace(/[#*`_\[\]()]/g, '').replace(/\n+/g, '. ');
+        speak(cleanText);
       }
-    }, 500 + Math.random() * 1000);
+    }, thinkingTime);
   };
 
   const handleVoiceInput = () => {
@@ -122,8 +160,30 @@ const Chat = () => {
     if (isSpeaking) {
       stopSpeaking();
     } else {
-      speak(content);
+      const cleanText = content.replace(/[#*`_\[\]()]/g, '').replace(/\n+/g, '. ');
+      speak(cleanText);
     }
+  };
+
+  const handleAddFavorite = (message: Message) => {
+    if (isFavorite(message.content, message.timestamp)) {
+      toast({
+        title: 'Zaten Favorilerde',
+        description: 'Bu mesaj zaten favorilerinizde.',
+      });
+      return;
+    }
+    
+    addFavorite({
+      content: message.content,
+      role: message.role,
+      timestamp: message.timestamp,
+    });
+    
+    toast({
+      title: 'Favorilere Eklendi',
+      description: 'Mesaj favorilerinize kaydedildi.',
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -137,7 +197,7 @@ const Chat = () => {
     setMessages([
       { 
         role: 'assistant', 
-        content: 'Sohbet temizlendi. Yeni bir konuşma başlayalım! 🚀', 
+        content: '## 🚀 Yeni Sohbet\n\nSohbet temizlendi. Yeni bir konuşma başlayalım!\n\nSize nasıl yardımcı olabilirim?', 
         timestamp: new Date() 
       }
     ]);
@@ -161,19 +221,56 @@ const Chat = () => {
     <div className="flex h-full flex-col bg-card/50 backdrop-blur-sm border-r border-border/50 p-4">
       <div className="mb-6 space-y-2 animate-fade-in">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
             <h1 className="text-xl font-bold">Yanlik</h1>
-            <p className="text-xs text-muted-foreground">AI Asistanı</p>
+            <p className="text-xs text-muted-foreground">GPT-4 Seviye AI</p>
           </div>
         </div>
+      </div>
+      
+      {/* AI Mode Toggle */}
+      <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium flex items-center gap-1">
+            <Zap className="h-4 w-4 text-primary" />
+            Gelişmiş AI
+          </span>
+          <Button
+            variant={useAdvancedAI ? "default" : "outline"}
+            size="sm"
+            className="h-6 text-xs"
+            onClick={() => setUseAdvancedAI(!useAdvancedAI)}
+          >
+            {useAdvancedAI ? 'Açık' : 'Kapalı'}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {useAdvancedAI ? 'Bağlam-farkındalıklı cevaplar' : 'Temel cevaplar'}
+        </p>
       </div>
       
       <div className="flex-1" />
       
       <div className="space-y-1">
+        <Button
+          variant="ghost"
+          className="w-full justify-start hover:bg-primary/10 transition-all duration-200"
+          onClick={() => setShowSearch(true)}
+        >
+          <Search className="mr-2 h-4 w-4" />
+          Ara (Ctrl+K)
+        </Button>
+        <Button
+          variant="ghost"
+          className="w-full justify-start hover:bg-primary/10 transition-all duration-200"
+          onClick={() => setShowFavorites(true)}
+        >
+          <Star className="mr-2 h-4 w-4" />
+          Favoriler (Ctrl+F)
+        </Button>
         <Button
           variant="ghost"
           className="w-full justify-start hover:bg-primary/10 transition-all duration-200"
@@ -253,20 +350,33 @@ const Chat = () => {
               </div>
               <div>
                 <h2 className="font-semibold">Yanlik</h2>
-                <p className="text-xs text-muted-foreground">Demo Sürüm</p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  {useAdvancedAI && <Zap className="h-3 w-3 text-primary" />}
+                  {useAdvancedAI ? 'Gelişmiş AI' : 'Temel Mod'}
+                </p>
               </div>
             </div>
           </div>
 
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={clearChat}
-            className="hidden sm:flex"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Temizle
-          </Button>
+          <div className="flex items-center gap-2">
+            <ThemeSelector />
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setShowSearch(true)}
+              className="hidden sm:flex"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setShowFavorites(true)}
+              className="hidden sm:flex"
+            >
+              <Star className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Messages Area */}
@@ -276,12 +386,12 @@ const Chat = () => {
             {messages.length === 1 && (
               <div className="space-y-3 animate-fade-in">
                 <p className="text-sm text-muted-foreground text-center">Örnek sorular:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {PROMPT_SUGGESTIONS.map((suggestion, idx) => (
                     <Button
                       key={idx}
                       variant="outline"
-                      className="text-left justify-start h-auto py-3 hover:bg-primary/5"
+                      className="text-left justify-start h-auto py-3 hover:bg-primary/5 text-sm"
                       onClick={() => useSuggestion(suggestion)}
                     >
                       {suggestion}
@@ -299,7 +409,7 @@ const Chat = () => {
                 }`}
               >
                 {/* Avatar */}
-                <Avatar className="w-8 h-8 border-2 border-border">
+                <Avatar className="w-8 h-8 border-2 border-border flex-shrink-0">
                   <AvatarFallback className={message.role === 'user' ? 'bg-primary' : 'bg-gradient-to-br from-primary to-primary/80'}>
                     {message.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-white" />}
                   </AvatarFallback>
@@ -323,16 +433,28 @@ const Chat = () => {
                       <p className="text-xs">
                         {formatTime(message.timestamp)}
                       </p>
-                      {message.role === 'assistant' && (
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0 hover:bg-primary/10"
-                          onClick={() => handleSpeakMessage(message.content)}
+                          className={`h-6 w-6 p-0 ${message.role === 'user' ? 'hover:bg-primary-foreground/10' : 'hover:bg-primary/10'}`}
+                          onClick={() => handleAddFavorite(message)}
+                          title="Favorilere ekle"
                         >
-                          {isSpeaking ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+                          <Star className={`h-3 w-3 ${isFavorite(message.content, message.timestamp) ? 'fill-yellow-500 text-yellow-500' : ''}`} />
                         </Button>
-                      )}
+                        {message.role === 'assistant' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-primary/10"
+                            onClick={() => handleSpeakMessage(message.content)}
+                            title={isSpeaking ? 'Durdur' : 'Sesli oku'}
+                          >
+                            {isSpeaking ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -348,10 +470,13 @@ const Chat = () => {
                   </AvatarFallback>
                 </Avatar>
                 <div className="bg-card border border-border/50 rounded-2xl px-4 py-3">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span className="text-xs text-muted-foreground ml-2">Düşünüyorum...</span>
                   </div>
                 </div>
               </div>
@@ -371,7 +496,7 @@ const Chat = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Mesajınızı yazın veya sesli konuşun..."
+                  placeholder="Mesajınızı yazın... (örn: 'JavaScript closure açıkla' veya '150 * 3 hesapla')"
                   className="min-h-[60px] max-h-[200px] resize-none bg-background pr-12"
                   disabled={isTyping}
                 />
@@ -381,26 +506,26 @@ const Chat = () => {
                   size="icon"
                   className={`absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 ${isListening ? 'text-red-500 animate-pulse' : ''}`}
                   onClick={handleVoiceInput}
+                  title={isListening ? 'Kaydı durdur' : 'Sesli mesaj'}
                 >
                   {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </Button>
               </div>
-              <div className="flex flex-col gap-1">
-                <Button 
-                  type="submit" 
-                  size="icon" 
-                  className="h-[60px] w-[60px]"
-                  disabled={!input.trim() || isTyping}
-                >
-                  <Send className="h-5 w-5" />
-                </Button>
-              </div>
+              <Button 
+                type="submit" 
+                size="icon" 
+                className="h-[60px] w-[60px]"
+                disabled={!input.trim() || isTyping}
+              >
+                <Send className="h-5 w-5" />
+              </Button>
             </div>
             <div className="flex items-center justify-between mt-2">
               <p className="text-xs text-muted-foreground">
-                Verileriniz sadece tarayıcınızda saklanır.
+                Tamamen çevrimdışı çalışır • API gerektirmez
               </p>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 className={`text-xs ${autoSpeak ? 'text-primary' : 'text-muted-foreground'}`}
@@ -413,6 +538,16 @@ const Chat = () => {
           </form>
         </div>
       </div>
+
+      {/* Favorites Panel */}
+      <FavoritesPanel isOpen={showFavorites} onClose={() => setShowFavorites(false)} />
+
+      {/* Search Dialog */}
+      <SearchDialog 
+        isOpen={showSearch} 
+        onClose={() => setShowSearch(false)} 
+        messages={messages}
+      />
     </div>
   );
 };
