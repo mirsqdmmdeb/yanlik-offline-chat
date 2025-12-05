@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getChatResponse } from '@/lib/chatResponses';
-import { LogOut, Settings, Menu, Info, Send, Sparkles, User, Bot, Trash2 } from 'lucide-react';
+import { LogOut, Settings, Menu, Info, Send, Sparkles, User, Bot, Trash2, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { useVoiceChat } from '@/hooks/useVoiceChat';
+import { MessageRenderer } from '@/components/MessageRenderer';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -29,11 +31,13 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isListening, isSpeaking, startListening, stopListening, speak, stopSpeaking } = useVoiceChat();
 
   // Load messages from localStorage
   useEffect(() => {
@@ -92,7 +96,34 @@ const Chat = () => {
       const assistantMessage: Message = { role: 'assistant', content: response, timestamp: new Date() };
       setMessages(prev => [...prev, assistantMessage]);
       setIsTyping(false);
+      
+      // Auto speak response if enabled
+      if (autoSpeak) {
+        speak(response);
+      }
     }, 500 + Math.random() * 1000);
+  };
+
+  const handleVoiceInput = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening((text) => {
+        setInput(text);
+        toast({
+          title: 'Ses Algılandı',
+          description: `"${text}"`,
+        });
+      });
+    }
+  };
+
+  const handleSpeakMessage = (content: string) => {
+    if (isSpeaking) {
+      stopSpeaking();
+    } else {
+      speak(content);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -283,10 +314,26 @@ const Chat = () => {
                         : 'bg-card border border-border/50'
                     }`}
                   >
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                    <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                      {formatTime(message.timestamp)}
-                    </p>
+                    {message.role === 'assistant' ? (
+                      <MessageRenderer content={message.content} />
+                    ) : (
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                    )}
+                    <div className={`flex items-center justify-between mt-2 ${message.role === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                      <p className="text-xs">
+                        {formatTime(message.timestamp)}
+                      </p>
+                      {message.role === 'assistant' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 hover:bg-primary/10"
+                          onClick={() => handleSpeakMessage(message.content)}
+                        >
+                          {isSpeaking ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -318,27 +365,51 @@ const Chat = () => {
         <div className="border-t border-border/50 bg-card/30 backdrop-blur-sm p-4">
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
             <div className="flex gap-2">
-              <Textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Mesajınızı yazın... (Enter: gönder, Shift+Enter: yeni satır)"
-                className="min-h-[60px] max-h-[200px] resize-none bg-background"
-                disabled={isTyping}
-              />
-              <Button 
-                type="submit" 
-                size="icon" 
-                className="h-[60px] w-[60px]"
-                disabled={!input.trim() || isTyping}
+              <div className="flex-1 relative">
+                <Textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Mesajınızı yazın veya sesli konuşun..."
+                  className="min-h-[60px] max-h-[200px] resize-none bg-background pr-12"
+                  disabled={isTyping}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 ${isListening ? 'text-red-500 animate-pulse' : ''}`}
+                  onClick={handleVoiceInput}
+                >
+                  {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Button 
+                  type="submit" 
+                  size="icon" 
+                  className="h-[60px] w-[60px]"
+                  disabled={!input.trim() || isTyping}
+                >
+                  <Send className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs text-muted-foreground">
+                Verileriniz sadece tarayıcınızda saklanır.
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`text-xs ${autoSpeak ? 'text-primary' : 'text-muted-foreground'}`}
+                onClick={() => setAutoSpeak(!autoSpeak)}
               >
-                <Send className="h-5 w-5" />
+                <Volume2 className="h-3 w-3 mr-1" />
+                {autoSpeak ? 'Ses Açık' : 'Ses Kapalı'}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Verileriniz sadece tarayıcınızda saklanır, sunucuya gönderilmez.
-            </p>
           </form>
         </div>
       </div>

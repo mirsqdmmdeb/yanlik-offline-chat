@@ -22,12 +22,107 @@ const isQuestion = (text: string): boolean => {
          text.includes('mü ');
 };
 
+// Calculator functions
+const evaluateExpression = (expr: string): number | null => {
+  try {
+    // Clean the expression
+    let cleaned = expr
+      .replace(/x/gi, '*')
+      .replace(/×/g, '*')
+      .replace(/÷/g, '/')
+      .replace(/,/g, '.')
+      .replace(/\s/g, '')
+      .replace(/\^/g, '**')
+      .replace(/²/g, '**2')
+      .replace(/³/g, '**3')
+      .replace(/√(\d+)/g, 'Math.sqrt($1)')
+      .replace(/sin\(/gi, 'Math.sin(')
+      .replace(/cos\(/gi, 'Math.cos(')
+      .replace(/tan\(/gi, 'Math.tan(')
+      .replace(/log\(/gi, 'Math.log10(')
+      .replace(/ln\(/gi, 'Math.log(')
+      .replace(/pi/gi, 'Math.PI')
+      .replace(/e(?![a-z])/gi, 'Math.E');
+    
+    // Security check - only allow math operations
+    if (!/^[0-9+\-*/.()Math.sqrtsincogtanlogPI E\s]+$/i.test(cleaned)) {
+      return null;
+    }
+    
+    const result = Function('"use strict"; return (' + cleaned + ')')();
+    return typeof result === 'number' && !isNaN(result) ? result : null;
+  } catch {
+    return null;
+  }
+};
+
+const extractMathExpression = (text: string): string | null => {
+  // Match various math patterns
+  const patterns = [
+    /(\d+[\s]*[\+\-\*\/x×÷\^][\s]*\d+[\s\d\+\-\*\/x×÷\^\.]*)/gi,
+    /hesapla[\s:]+([0-9+\-*\/x×÷\^().\s]+)/gi,
+    /([0-9]+[\s]*[\+\-\*\/][\s]*[0-9]+[\s]*[=]?)/gi,
+    /kaç[\s]+([0-9+\-*\/x×÷\^().\s]+)/gi,
+    /(\d+)\s*(artı|eksi|çarpı|bölü)\s*(\d+)/gi,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[0]
+        .replace(/hesapla[\s:]*/gi, '')
+        .replace(/kaç[\s]*/gi, '')
+        .replace(/artı/gi, '+')
+        .replace(/eksi/gi, '-')
+        .replace(/çarpı/gi, '*')
+        .replace(/bölü/gi, '/');
+    }
+  }
+  return null;
+};
+
+const formatNumber = (num: number): string => {
+  if (Number.isInteger(num)) {
+    return num.toLocaleString('tr-TR');
+  }
+  return num.toLocaleString('tr-TR', { maximumFractionDigits: 6 });
+};
+
 export const getChatResponse = (message: string): string => {
   const lowerMessage = message.toLowerCase().trim();
 
   // Empty message
   if (!lowerMessage) {
     return 'Bir şeyler yazmayı unuttunuz galiba! 😊 Size nasıl yardımcı olabilirim?';
+  }
+
+  // Calculator functionality
+  if (containsAny(lowerMessage, ['hesapla', 'kaç eder', 'kaç yapar', 'topla', 'çıkar', 'çarp', 'böl']) ||
+      /\d+[\s]*[\+\-\*\/x×÷\^][\s]*\d+/.test(lowerMessage)) {
+    const expr = extractMathExpression(message);
+    if (expr) {
+      const result = evaluateExpression(expr);
+      if (result !== null) {
+        return `🧮 **Hesap Makinesi**\n\n**İşlem:** \`${expr.trim()}\`\n**Sonuç:** **${formatNumber(result)}**\n\n_Başka bir hesaplama yapmak ister misiniz?_`;
+      }
+    }
+  }
+
+  // Unit conversions
+  if (containsAny(lowerMessage, ['kaç cm', 'kaç metre', 'kaç km', 'kaç mil', 'kaç inch', 'kaç feet'])) {
+    return `📏 **Birim Dönüştürücü**\n\n**Uzunluk:**\n- 1 metre = 100 cm = 1000 mm\n- 1 km = 1000 metre\n- 1 mil = 1.609 km\n- 1 feet = 30.48 cm\n- 1 inch = 2.54 cm\n\n**Ağırlık:**\n- 1 kg = 1000 gram\n- 1 pound = 0.453 kg\n- 1 ons = 28.35 gram\n\n_Spesifik bir dönüşüm yapmak ister misiniz? Örn: "150 cm kaç metre"_`;
+  }
+
+  // Percentage calculations
+  if (containsAny(lowerMessage, ['yüzde', 'percent', '%'])) {
+    const percentMatch = lowerMessage.match(/(\d+)\s*%?\s*(yüzde|percent)?\s*(\d+)/);
+    if (percentMatch) {
+      const percent = parseFloat(percentMatch[1]);
+      const base = parseFloat(percentMatch[3]);
+      const result = (percent / 100) * base;
+      return `📊 **Yüzde Hesaplama**\n\n**${percent}%** of **${base}** = **${formatNumber(result)}**\n\n_Yüzde hesaplama formülü: (Yüzde/100) × Sayı_`;
+    }
+    return `📊 **Yüzde Hesaplama**\n\n**Formül:** (Yüzde/100) × Sayı\n\n**Örnek:**\n- %20 of 150 = 30\n- %15 of 1000 = 150\n\n_Örnek: "25 yüzde 200" veya "200'ün %25'i"_`;
   }
 
   // Special question about creator
