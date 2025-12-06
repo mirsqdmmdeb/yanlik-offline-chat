@@ -48,7 +48,7 @@ const Chat = () => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isListening, isSpeaking, startListening, stopListening, speak, stopSpeaking } = useVoiceChat();
+  const { isListening, isSpeaking, interimTranscript, startListening, stopListening, speak, stopSpeaking } = useVoiceChat();
   const { addFavorite, isFavorite } = useFavorites();
 
   // Keyboard shortcuts
@@ -147,13 +147,30 @@ const Chat = () => {
     if (isListening) {
       stopListening();
     } else {
-      startListening((text) => {
-        setInput(text);
+      const started = startListening(
+        (text) => {
+          setInput(prev => prev ? prev + ' ' + text : text);
+          toast({
+            title: 'Ses Algılandı',
+            description: `"${text}"`,
+          });
+        },
+        (interim) => {
+          // Show interim results in real-time
+          setInput(prev => {
+            const base = prev.replace(/\s*\[.*\]$/, ''); // Remove previous interim
+            return interim ? `${base} [${interim}]` : base;
+          });
+        }
+      );
+      
+      if (!started) {
         toast({
-          title: 'Ses Algılandı',
-          description: `"${text}"`,
+          title: 'Hata',
+          description: 'Mikrofon erişimi sağlanamadı. Tarayıcı izinlerini kontrol edin.',
+          variant: 'destructive',
         });
-      });
+      }
     }
   };
 
