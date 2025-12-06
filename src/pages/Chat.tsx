@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getChatResponse } from '@/lib/chatResponses';
 import { getAdvancedAIResponse } from '@/lib/advancedAI';
+import { getGPT6Response } from '@/lib/gpt6Engine';
 import { LogOut, Settings, Menu, Info, Send, Sparkles, User, Bot, Trash2, Mic, MicOff, Volume2, VolumeX, Star, Search, Zap } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -26,12 +27,12 @@ interface Message {
 const STORAGE_KEY = 'yanlik_chat_history';
 
 const PROMPT_SUGGESTIONS = [
-  'JavaScript closure nedir? Örnek ver',
-  'Trading stratejileri ve risk yönetimi',
-  'React ile modern web geliştirme',
-  '25 + 37 * 2 hesapla',
-  'Python ve JavaScript karşılaştır',
-  'Kripto para yatırım rehberi'
+  'İstanbul hakkında bilgi ver',
+  'Saat kaç?',
+  '/kronometre başlat',
+  '1500 TL 3 kişiye bölünürse kaç eder?',
+  'Motivasyon ver',
+  'Ne yapabilirsin?'
 ];
 
 const Chat = () => {
@@ -82,9 +83,9 @@ const Chat = () => {
       }
     } else {
       setMessages([
-        { 
+          { 
           role: 'assistant', 
-          content: '## 👋 Merhaba! Ben Yanlik\n\nGelişmiş yapay zeka asistanınız. Tamamen tarayıcınızda çalışıyorum - internet bağlantısı veya API gerekmez!\n\n**Neler yapabilirim:**\n- 💻 Programlama (JavaScript, Python, React...)\n- 📈 Trading ve yatırım stratejileri\n- 🧮 Hesaplama (matematiksel işlemler)\n- 🔍 Karşılaştırma ve analiz\n- 📚 Genel bilgi ve eğitim\n\n*Ctrl+K ile arama, Ctrl+F ile favoriler*', 
+          content: '## 👋 Merhaba! Ben Yanlik - GPT-6 Offline AI\n\nTamamen tarayıcınızda çalışan gelişmiş yapay zeka. Cloud/API yok, internet gerekmez!\n\n**🌟 Öne Çıkan Yetenekler:**\n- 🇹🇷 **Türkiye & 81 İl** bilgisi\n- 🧮 **Hesap Makinesi** (matematiksel işlemler)\n- ⏰ **Saat/Tarih/Kronometre**\n- 💪 **Motivasyon** sözleri\n- 💻 **Programlama** (400+ kategori bilgi)\n- 📚 **Bilim, Coğrafya, Sanat**\n\n**⌨️ Komutlar:** /kronometre başlat, /stil formal, /memory add\n\n*Ctrl+K: Arama | Ctrl+F: Favoriler*\n\n_Üretici: mirsqdmmdevs_', 
           timestamp: new Date() 
         }
       ]);
@@ -125,9 +126,9 @@ const Chat = () => {
       // Get conversation history for context
       const history = messages.map(m => ({ role: m.role, content: m.content }));
       
-      // Use advanced AI if enabled, otherwise fallback to basic
+      // Use GPT-6 engine - most advanced offline AI
       const response = useAdvancedAI 
-        ? getAdvancedAIResponse(currentInput, history)
+        ? getGPT6Response(currentInput, history)
         : getChatResponse(currentInput);
       
       const assistantMessage: Message = { role: 'assistant', content: response, timestamp: new Date() };
@@ -226,7 +227,7 @@ const Chat = () => {
           </div>
           <div>
             <h1 className="text-xl font-bold">Yanlik</h1>
-            <p className="text-xs text-muted-foreground">GPT-4 Seviye AI</p>
+            <p className="text-xs text-muted-foreground">GPT-6 Offline AI</p>
           </div>
         </div>
       </div>
@@ -248,7 +249,7 @@ const Chat = () => {
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          {useAdvancedAI ? 'Bağlam-farkındalıklı cevaplar' : 'Temel cevaplar'}
+          {useAdvancedAI ? 'TR 81 il, hesap, kronometre, bilgi' : 'Temel cevaplar'}
         </p>
       </div>
       
