@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { dbManager, IDBUser } from '@/lib/indexedDB';
+import { analytics } from '@/lib/analytics';
 
 interface User {
   id: string;
@@ -84,6 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setUser(userData);
       localStorage.setItem('yanlik_user_id', foundUser.id);
+      analytics.userLogin();
       return { success: true };
     } catch (error) {
       return { success: false, error: 'Giriş sırasında bir hata oluştu' };
@@ -118,6 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setUser(userData);
       localStorage.setItem('yanlik_user_id', newUser.id);
+      analytics.userSignup();
       return { success: true };
     } catch (error) {
       return { success: false, error: 'Kayıt sırasında bir hata oluştu' };
@@ -125,6 +128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    analytics.userLogout();
     setUser(null);
     localStorage.removeItem('yanlik_user_id');
   };
