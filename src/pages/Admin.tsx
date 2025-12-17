@@ -3,9 +3,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useChat } from '@/contexts/ChatContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Users, MessageSquare, Settings, Database, Activity } from 'lucide-react';
+import { ArrowLeft, Users, MessageSquare, Settings, Database, Activity, BarChart3, TrendingUp, MousePointer, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { dbManager } from '@/lib/indexedDB';
+import { hasConsent } from '@/lib/analytics';
+
+interface AnalyticsData {
+  pageViews: { page: string; count: number }[];
+  events: { name: string; count: number }[];
+  totalPageViews: number;
+  totalEvents: number;
+}
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -17,6 +25,12 @@ const Admin = () => {
     totalConversations: 0,
     storageEstimate: '0 KB',
     uptime: '100%'
+  });
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
+    pageViews: [],
+    events: [],
+    totalPageViews: 0,
+    totalEvents: 0
   });
 
   useEffect(() => {
@@ -54,6 +68,16 @@ const Admin = () => {
         storageEstimate: `${sizeInKB} KB`,
         uptime: '100%'
       });
+
+      // Load local analytics data
+      const storedAnalytics = localStorage.getItem('yanlik_analytics');
+      if (storedAnalytics) {
+        try {
+          setAnalyticsData(JSON.parse(storedAnalytics));
+        } catch (e) {
+          console.error('Failed to parse analytics data', e);
+        }
+      }
     };
 
     calculateStats();
@@ -141,6 +165,85 @@ const Admin = () => {
 
         </div>
 
+        {/* Analytics Dashboard */}
+        <Card className="mt-6 bg-card/80 backdrop-blur-sm border-border/50 animate-fade-in-up">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Analytics Dashboard
+            </CardTitle>
+            <CardDescription>
+              Google Analytics verileri {hasConsent() ? '(Aktif)' : '(Devre dışı - Çerez onayı gerekli)'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {hasConsent() ? (
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-violet-500/10 to-purple-500/10 border border-violet-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MousePointer className="w-4 h-4 text-violet-500" />
+                      <span className="text-sm font-medium">Sayfa Görüntüleme</span>
+                    </div>
+                    <p className="text-2xl font-bold text-violet-500">{analyticsData.totalPageViews}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Toplam görüntüleme</p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="w-4 h-4 text-emerald-500" />
+                      <span className="text-sm font-medium">Olaylar</span>
+                    </div>
+                    <p className="text-2xl font-bold text-emerald-500">{analyticsData.totalEvents}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Toplam event</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg bg-secondary/50">
+                  <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Son Aktiviteler
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    {analyticsData.events.length > 0 ? (
+                      analyticsData.events.slice(0, 5).map((event, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded bg-background/50">
+                          <span className="text-muted-foreground">{event.name}</span>
+                          <span className="font-medium">{event.count}x</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-muted-foreground text-center py-4">Henüz event kaydedilmedi</p>
+                    )}
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  Detaylı analytics için{' '}
+                  <a 
+                    href="https://analytics.google.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Google Analytics
+                  </a>
+                  {' '}panelini ziyaret edin
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <BarChart3 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  Analytics verileri görüntülemek için çerez onayı gereklidir.
+                </p>
+                <Button variant="outline" onClick={() => navigate('/settings')}>
+                  Ayarlara Git
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="mt-6 bg-card/80 backdrop-blur-sm border-border/50 animate-fade-in-up">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -165,6 +268,12 @@ const Admin = () => {
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse-glow" />
                   <span className="font-semibold text-green-600 dark:text-green-400">Aktif</span>
                 </div>
+              </div>
+              <div className="flex justify-between items-center p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
+                <span className="text-muted-foreground">Analytics:</span>
+                <span className={`font-semibold ${hasConsent() ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
+                  {hasConsent() ? 'Aktif' : 'Devre Dışı'}
+                </span>
               </div>
               <div className="flex justify-between items-center p-3 rounded-lg bg-secondary/50 hover:bg-secondary/70 transition-colors">
                 <span className="text-muted-foreground">Son Güncelleme:</span>

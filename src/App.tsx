@@ -7,6 +7,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ChatProvider } from "./contexts/ChatContext";
 import CookieConsent from "./components/CookieConsent";
+import PageTracker from "./components/PageTracker";
 import "./lib/i18n";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -30,6 +31,7 @@ const App = () => (
             <Sonner />
             <CookieConsent />
             <BrowserRouter>
+              <PageTracker />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
