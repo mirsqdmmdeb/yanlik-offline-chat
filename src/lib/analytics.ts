@@ -7,6 +7,63 @@ declare global {
 }
 
 const GA_MEASUREMENT_ID = 'G-SXHEP649B8';
+const LOCAL_ANALYTICS_KEY = 'yanlik_analytics';
+
+interface LocalAnalytics {
+  pageViews: { page: string; count: number }[];
+  events: { name: string; count: number }[];
+  totalPageViews: number;
+  totalEvents: number;
+}
+
+// Get local analytics data
+const getLocalAnalytics = (): LocalAnalytics => {
+  try {
+    const stored = localStorage.getItem(LOCAL_ANALYTICS_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch (e) {
+    console.error('Failed to parse local analytics', e);
+  }
+  return { pageViews: [], events: [], totalPageViews: 0, totalEvents: 0 };
+};
+
+// Save local analytics data
+const saveLocalAnalytics = (data: LocalAnalytics) => {
+  try {
+    localStorage.setItem(LOCAL_ANALYTICS_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save local analytics', e);
+  }
+};
+
+// Track locally for admin dashboard
+const trackLocalPageView = (page: string) => {
+  const data = getLocalAnalytics();
+  const existing = data.pageViews.find(p => p.page === page);
+  if (existing) {
+    existing.count++;
+  } else {
+    data.pageViews.push({ page, count: 1 });
+  }
+  data.totalPageViews++;
+  saveLocalAnalytics(data);
+};
+
+const trackLocalEvent = (eventName: string) => {
+  const data = getLocalAnalytics();
+  const existing = data.events.find(e => e.name === eventName);
+  if (existing) {
+    existing.count++;
+  } else {
+    data.events.push({ name: eventName, count: 1 });
+  }
+  data.totalEvents++;
+  // Keep only last 20 event types
+  if (data.events.length > 20) {
+    data.events = data.events.slice(-20);
+  }
+  saveLocalAnalytics(data);
+};
 
 // Check if user has consented to cookies
 export const hasConsent = (): boolean => {
@@ -15,6 +72,9 @@ export const hasConsent = (): boolean => {
 
 // Track page views
 export const trackPageView = (path: string, title?: string) => {
+  // Always track locally for admin dashboard
+  trackLocalPageView(title || path);
+  
   if (!hasConsent() || typeof window.gtag !== 'function') return;
   
   window.gtag('config', GA_MEASUREMENT_ID, {
@@ -30,6 +90,9 @@ export const trackEvent = (
   label?: string,
   value?: number
 ) => {
+  // Always track locally for admin dashboard
+  trackLocalEvent(`${category}:${action}`);
+  
   if (!hasConsent() || typeof window.gtag !== 'function') return;
   
   window.gtag('event', action, {
