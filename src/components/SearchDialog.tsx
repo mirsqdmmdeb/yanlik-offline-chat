@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, MessageSquare, Calendar, User, Bot, Filter, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { analytics } from '@/lib/analytics';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -48,6 +49,8 @@ export const SearchDialog = ({ isOpen, onClose, messages, onNavigateToMessage }:
       setSelectedIndex(0);
       return;
     }
+    
+    analytics.searchUsed();
 
     const lowerQuery = searchQuery.toLowerCase();
     const searchResults: SearchResult[] = [];

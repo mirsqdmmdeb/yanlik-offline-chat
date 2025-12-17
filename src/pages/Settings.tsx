@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, User, Trash2 } from 'lucide-react';
+import { ArrowLeft, User, Trash2, Cookie, Shield } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { analytics } from '@/lib/analytics';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,7 @@ const Settings = () => {
   const [notifications, setNotifications] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
+  const [cookieConsent, setCookieConsent] = useState<'accepted' | 'rejected' | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('yanlik_settings');
@@ -41,6 +43,10 @@ const Settings = () => {
       setSoundEnabled(settings.soundEnabled ?? true);
       setAutoSave(settings.autoSave ?? true);
     }
+    
+    // Load cookie consent status
+    const consent = localStorage.getItem('cookie-consent');
+    setCookieConsent(consent as 'accepted' | 'rejected' | null);
   }, []);
 
   useEffect(() => {
@@ -234,6 +240,73 @@ const Settings = () => {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Cookie className="w-5 h-5" />
+                Çerez ve Gizlilik
+              </CardTitle>
+              <CardDescription>KVKK ve GDPR uyumlu çerez tercihleri</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-secondary/50 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm">Analitik Çerezleri</span>
+                  </div>
+                  <span className={`text-sm font-medium ${cookieConsent === 'accepted' ? 'text-green-500' : 'text-muted-foreground'}`}>
+                    {cookieConsent === 'accepted' ? 'Kabul Edildi' : cookieConsent === 'rejected' ? 'Reddedildi' : 'Belirlenmedi'}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Bu site, deneyiminizi geliştirmek için Google Analytics kullanmaktadır. Verileriniz anonim olarak işlenir.
+                </p>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  variant={cookieConsent === 'accepted' ? 'default' : 'outline'}
+                  className="flex-1"
+                  onClick={() => {
+                    localStorage.setItem('cookie-consent', 'accepted');
+                    setCookieConsent('accepted');
+                    toast({
+                      title: "Tercih Kaydedildi",
+                      description: "Analitik çerezleri etkinleştirildi.",
+                    });
+                    setTimeout(() => window.location.reload(), 500);
+                  }}
+                >
+                  Kabul Et
+                </Button>
+                <Button
+                  variant={cookieConsent === 'rejected' ? 'destructive' : 'outline'}
+                  className="flex-1"
+                  onClick={() => {
+                    localStorage.setItem('cookie-consent', 'rejected');
+                    setCookieConsent('rejected');
+                    toast({
+                      title: "Tercih Kaydedildi",
+                      description: "Analitik çerezleri devre dışı bırakıldı.",
+                    });
+                  }}
+                >
+                  Reddet
+                </Button>
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-muted-foreground"
+                onClick={() => navigate('/privacy')}
+              >
+                Gizlilik Politikasını Görüntüle
+              </Button>
             </CardContent>
           </Card>
 

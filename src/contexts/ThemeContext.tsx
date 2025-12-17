@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { analytics } from '@/lib/analytics';
 
 type Theme = 'light' | 'dark' | 'auto';
 type ColorTheme = 'default' | 'ocean' | 'purple' | 'forest' | 'sunset' | 'rose' | 'midnight';
@@ -57,8 +58,18 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('yanlik_color_theme', colorTheme);
   }, [colorTheme]);
 
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+    analytics.themeChanged(newTheme);
+  };
+
+  const setColorTheme = (newColorTheme: ColorTheme) => {
+    setColorThemeState(newColorTheme);
+    analytics.themeChanged(newColorTheme);
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme: setThemeState, actualTheme, colorTheme, setColorTheme: setColorThemeState }}>
+    <ThemeContext.Provider value={{ theme, setTheme, actualTheme, colorTheme, setColorTheme }}>
       {children}
     </ThemeContext.Provider>
   );

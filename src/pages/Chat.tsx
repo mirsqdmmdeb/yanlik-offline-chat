@@ -17,6 +17,7 @@ import { MessageRenderer } from '@/components/MessageRenderer';
 import { FavoritesPanel } from '@/components/FavoritesPanel';
 import { SearchDialog } from '@/components/SearchDialog';
 import { ThemeSelector } from '@/components/ThemeSelector';
+import { analytics } from '@/lib/analytics';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -116,6 +117,9 @@ const Chat = () => {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsTyping(true);
+    
+    // Track message sent
+    analytics.chatMessageSent(currentInput.length);
 
     setTimeout(() => inputRef.current?.focus(), 100);
 
@@ -150,6 +154,7 @@ const Chat = () => {
       const started = startListening(
         (text) => {
           setInput(prev => prev ? prev + ' ' + text : text);
+          analytics.chatVoiceUsed();
           toast({
             title: 'Ses Algılandı',
             description: `"${text}"`,
@@ -198,6 +203,7 @@ const Chat = () => {
       timestamp: message.timestamp,
     });
     
+    analytics.favoriteAdded();
     toast({
       title: 'Favorilere Eklendi',
       description: 'Mesaj favorilerinize kaydedildi.',
