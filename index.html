@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html lang="tr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-SXHEP649B8"></script>
@@ -12,10 +12,41 @@
       gtag('js', new Date());
       gtag('config', 'G-SXHEP649B8');
     </script>
+    
+    <!-- Primary Meta Tags -->
     <title>Yanlik - Yapay Zeka Asistanı</title>
+    <meta name="title" content="Yanlik - Yapay Zeka Asistanı" />
     <meta name="description" content="Yanlik, tarayıcıda çalışan kişisel yapay zekâ asistan demo projesi. AI, yazılım, trading ve daha fazlası için geliştirildi." />
     <meta name="author" content="mirsqdmmdevs" />
-    <meta name="keywords" content="yapay zeka, AI asistanı, chat bot, türkçe AI, demo proje, mirsqdmmdevs" />
+    <meta name="keywords" content="yapay zeka, AI asistanı, chat bot, türkçe AI, demo proje, mirsqdmmdevs, offline AI, PWA" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="Turkish" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="Yanlik" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Yanlik" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#8b5cf6" />
+    <meta name="msapplication-TileColor" content="#8b5cf6" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="format-detection" content="telephone=no" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Favicons & Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192x192.png" />
+    
+    <!-- Splash Screens for iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -23,6 +54,8 @@
     <meta property="og:title" content="Yanlik - Yapay Zeka Asistanı" />
     <meta property="og:description" content="Yanlik, tarayıcıda çalışan kişisel yapay zekâ asistan demo projesi." />
     <meta property="og:image" content="https://yanlikai.vercel.app/placeholder.svg" />
+    <meta property="og:locale" content="tr_TR" />
+    <meta property="og:site_name" content="Yanlik" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -31,14 +64,25 @@
     <meta name="twitter:description" content="Yanlik, tarayıcıda çalışan kişisel yapay zekâ asistan demo projesi." />
     <meta name="twitter:image" content="https://yanlikai.vercel.app/placeholder.svg" />
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('Yanlik SW registered:', registration.scope);
+            })
+            .catch((error) => {
+              console.log('Yanlik SW registration failed:', error);
+            });
+        });
+      }
+    </script>
   </head>
 
   <body>

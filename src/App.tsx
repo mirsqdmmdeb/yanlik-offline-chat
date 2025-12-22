@@ -27,6 +27,7 @@ import FAQ from "./pages/FAQ";
 import Roadmap from "./pages/Roadmap";
 import Status from "./pages/Status";
 import Developer from "./pages/Developer";
+import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,7 @@ const App = () => (
                   <Route path="/roadmap" element={<Roadmap />} />
                   <Route path="/status" element={<Status />} />
                   <Route path="/developer" element={<Developer />} />
+                  <Route path="/install" element={<Install />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
