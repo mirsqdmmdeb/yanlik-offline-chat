@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { getChatResponse } from '@/lib/chatResponses';
 import { getAdvancedAIResponse } from '@/lib/advancedAI';
 import { getGPT6Response } from '@/lib/gpt6Engine';
-import { LogOut, Settings, Menu, Info, Send, Sparkles, User, Bot, Trash2, Mic, MicOff, Volume2, VolumeX, Star, Search, Zap } from 'lucide-react';
+import { LogOut, Settings, Menu, Info, Send, Sparkles, User, Bot, Trash2, Mic, MicOff, Volume2, VolumeX, Star, Search, Zap, Flag, ThumbsUp, ThumbsDown, Copy, Check, AlertTriangle, FileText, HelpCircle, Map, Activity, Code2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
@@ -17,15 +17,28 @@ import { MessageRenderer } from '@/components/MessageRenderer';
 import { FavoritesPanel } from '@/components/FavoritesPanel';
 import { SearchDialog } from '@/components/SearchDialog';
 import { ThemeSelector } from '@/components/ThemeSelector';
+import { AbuseReportDialog } from '@/components/AbuseReportDialog';
 import { analytics } from '@/lib/analytics';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  feedback?: 'positive' | 'negative';
 }
 
 const STORAGE_KEY = 'yanlik_chat_history';
+const FEEDBACK_KEY = 'yanlik_message_feedback';
+
+// Hassas veri kalıpları
+const SENSITIVE_PATTERNS = [
+  { pattern: /\b\d{11}\b/g, name: 'T.C. Kimlik No', description: '11 haneli kimlik numarası tespit edildi' },
+  { pattern: /\b\d{16}\b/g, name: 'Kredi Kartı', description: '16 haneli kart numarası tespit edildi' },
+  { pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g, name: 'Kredi Kartı', description: 'Kart numarası formatı tespit edildi' },
+  { pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, name: 'E-posta', description: 'E-posta adresi tespit edildi' },
+  { pattern: /\b05\d{9}\b/g, name: 'Telefon', description: 'Cep telefonu numarası tespit edildi' },
+  { pattern: /\bTR\d{24}\b/gi, name: 'IBAN', description: 'IBAN numarası tespit edildi' },
+];
 
 const PROMPT_SUGGESTIONS = [
   'İstanbul hakkında bilgi ver',
@@ -44,6 +57,10 @@ const Chat = () => {
   const [useAdvancedAI, setUseAdvancedAI] = useState(true);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showAbuseReport, setShowAbuseReport] = useState(false);
+  const [reportingMessage, setReportingMessage] = useState<Message | null>(null);
+  const [sensitiveWarning, setSensitiveWarning] = useState<string | null>(null);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { logout, user } = useAuth();
@@ -51,6 +68,27 @@ const Chat = () => {
   const { toast } = useToast();
   const { isListening, isSpeaking, interimTranscript, startListening, stopListening, speak, stopSpeaking } = useVoiceChat();
   const { addFavorite, isFavorite } = useFavorites();
+
+  // Hassas veri kontrolü
+  const checkSensitiveData = (text: string): string | null => {
+    for (const { pattern, name, description } of SENSITIVE_PATTERNS) {
+      if (pattern.test(text)) {
+        pattern.lastIndex = 0; // Reset regex
+        return `⚠️ ${name}: ${description}. Bu veriyi paylaşmak istemeyebilirsiniz.`;
+      }
+    }
+    return null;
+  };
+
+  // Input değiştiğinde hassas veri kontrolü
+  useEffect(() => {
+    if (input.length > 5) {
+      const warning = checkSensitiveData(input);
+      setSensitiveWarning(warning);
+    } else {
+      setSensitiveWarning(null);
+    }
+  }, [input]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -112,10 +150,17 @@ const Chat = () => {
     e.preventDefault();
     if (!input.trim() || isTyping) return;
 
+    // Hassas veri uyarısı varsa onay iste
+    if (sensitiveWarning) {
+      const confirmed = window.confirm(`${sensitiveWarning}\n\nYine de göndermek istiyor musunuz?`);
+      if (!confirmed) return;
+    }
+
     const userMessage: Message = { role: 'user', content: input, timestamp: new Date() };
     const currentInput = input;
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setSensitiveWarning(null);
     setIsTyping(true);
     
     // Track message sent
@@ -210,6 +255,43 @@ const Chat = () => {
     });
   };
 
+  const handleFeedback = (messageIndex: number, feedback: 'positive' | 'negative') => {
+    setMessages(prev => prev.map((m, i) => 
+      i === messageIndex ? { ...m, feedback } : m
+    ));
+    
+    // Save feedback
+    const feedbackData = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || '[]');
+    feedbackData.push({
+      messageContent: messages[messageIndex].content.substring(0, 100),
+      feedback,
+      timestamp: new Date().toISOString(),
+    });
+    localStorage.setItem(FEEDBACK_KEY, JSON.stringify(feedbackData));
+    
+    toast({
+      title: feedback === 'positive' ? '👍 Teşekkürler!' : '👎 Geri bildirim alındı',
+      description: feedback === 'positive' 
+        ? 'Olumlu geri bildiriminiz için teşekkürler.' 
+        : 'Daha iyi olmak için çalışacağız.',
+    });
+  };
+
+  const handleCopyMessage = (content: string, index: number) => {
+    navigator.clipboard.writeText(content);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
+    toast({
+      title: 'Kopyalandı',
+      description: 'Mesaj panoya kopyalandı.',
+    });
+  };
+
+  const handleReportAbuse = (message: Message) => {
+    setReportingMessage(message);
+    setShowAbuseReport(true);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -302,6 +384,14 @@ const Chat = () => {
         >
           <Trash2 className="mr-2 h-4 w-4" />
           Sohbeti Temizle
+        </Button>
+        <Button
+          variant="ghost"
+          className="w-full justify-start hover:bg-primary/10 transition-all duration-200"
+          onClick={() => navigate('/faq')}
+        >
+          <HelpCircle className="mr-2 h-4 w-4" />
+          SSS
         </Button>
         <Button
           variant="ghost"
@@ -458,6 +548,18 @@ const Chat = () => {
                         {formatTime(message.timestamp)}
                       </p>
                       <div className="flex items-center gap-1">
+                        {/* Copy Button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-6 w-6 p-0 ${message.role === 'user' ? 'hover:bg-primary-foreground/10' : 'hover:bg-primary/10'}`}
+                          onClick={() => handleCopyMessage(message.content, idx)}
+                          title="Kopyala"
+                        >
+                          {copiedIndex === idx ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                        </Button>
+                        
+                        {/* Favorite Button */}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -467,16 +569,51 @@ const Chat = () => {
                         >
                           <Star className={`h-3 w-3 ${isFavorite(message.content, message.timestamp) ? 'fill-yellow-500 text-yellow-500' : ''}`} />
                         </Button>
+                        
                         {message.role === 'assistant' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 hover:bg-primary/10"
-                            onClick={() => handleSpeakMessage(message.content)}
-                            title={isSpeaking ? 'Durdur' : 'Sesli oku'}
-                          >
-                            {isSpeaking ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
-                          </Button>
+                          <>
+                            {/* Speak Button */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 hover:bg-primary/10"
+                              onClick={() => handleSpeakMessage(message.content)}
+                              title={isSpeaking ? 'Durdur' : 'Sesli oku'}
+                            >
+                              {isSpeaking ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+                            </Button>
+                            
+                            {/* Feedback Buttons */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`h-6 w-6 p-0 hover:bg-green-500/10 ${message.feedback === 'positive' ? 'text-green-500' : ''}`}
+                              onClick={() => handleFeedback(idx, 'positive')}
+                              title="Faydalı"
+                            >
+                              <ThumbsUp className={`h-3 w-3 ${message.feedback === 'positive' ? 'fill-current' : ''}`} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`h-6 w-6 p-0 hover:bg-red-500/10 ${message.feedback === 'negative' ? 'text-red-500' : ''}`}
+                              onClick={() => handleFeedback(idx, 'negative')}
+                              title="Faydasız"
+                            >
+                              <ThumbsDown className={`h-3 w-3 ${message.feedback === 'negative' ? 'fill-current' : ''}`} />
+                            </Button>
+                            
+                            {/* Report Button */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 hover:bg-destructive/10"
+                              onClick={() => handleReportAbuse(message)}
+                              title="Sorun bildir"
+                            >
+                              <Flag className="h-3 w-3" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -510,6 +647,14 @@ const Chat = () => {
           </div>
         </ScrollArea>
 
+        {/* Sensitive Data Warning */}
+        {sensitiveWarning && (
+          <div className="mx-4 mb-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-center gap-2 text-sm">
+            <AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+            <span className="text-yellow-600 dark:text-yellow-400">{sensitiveWarning}</span>
+          </div>
+        )}
+
         {/* Input Area */}
         <div className="border-t border-border/50 bg-card/30 backdrop-blur-sm p-4">
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
@@ -521,7 +666,7 @@ const Chat = () => {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Mesajınızı yazın... (örn: 'JavaScript closure açıkla' veya '150 * 3 hesapla')"
-                  className="min-h-[60px] max-h-[200px] resize-none bg-background pr-12"
+                  className={`min-h-[60px] max-h-[200px] resize-none bg-background pr-12 ${sensitiveWarning ? 'border-yellow-500' : ''}`}
                   disabled={isTyping}
                 />
                 <Button
@@ -571,6 +716,16 @@ const Chat = () => {
         isOpen={showSearch} 
         onClose={() => setShowSearch(false)} 
         messages={messages}
+      />
+
+      {/* Abuse Report Dialog */}
+      <AbuseReportDialog
+        open={showAbuseReport}
+        onOpenChange={(open) => {
+          setShowAbuseReport(open);
+          if (!open) setReportingMessage(null);
+        }}
+        messageContent={reportingMessage?.content || ''}
       />
     </div>
   );

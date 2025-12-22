@@ -225,45 +225,48 @@ const Index = () => {
       {/* Footer */}
       <div className="relative border-t border-border/50 py-8">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <p>© 2025 Yanlik · Created by <span className="font-semibold text-primary">mirsqdmmdevs</span></p>
-            <div className="flex items-center gap-4">
-              <a 
-                href="https://instagram.com/mirsqdmmdevs" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:text-primary transition-colors"
-              >
-                Instagram
-              </a>
-              <span>·</span>
-              <a 
-                href="https://github.com/mirsqdmmdeb" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="hover:text-primary transition-colors"
-              >
-                GitHub
-              </a>
-              <span>·</span>
-              <button
-                onClick={() => navigate('/privacy')}
-                className="hover:text-primary transition-colors"
-              >
-                Gizlilik & KVKK
-              </button>
-              <span>·</span>
-              <button
-                onClick={() => navigate('/terms')}
-                className="hover:text-primary transition-colors"
-              >
-                Kullanım Şartları
-              </button>
+          {/* Footer Links Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            <div>
+              <h4 className="font-semibold mb-3">Ürün</h4>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <button onClick={() => navigate('/login')} className="block hover:text-primary transition-colors">Başla</button>
+                <button onClick={() => navigate('/about')} className="block hover:text-primary transition-colors">Hakkında</button>
+                <button onClick={() => navigate('/roadmap')} className="block hover:text-primary transition-colors">Yol Haritası</button>
+                <button onClick={() => navigate('/status')} className="block hover:text-primary transition-colors">Sistem Durumu</button>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-3">Destek</h4>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <button onClick={() => navigate('/faq')} className="block hover:text-primary transition-colors">SSS</button>
+                <button onClick={() => navigate('/developer')} className="block hover:text-primary transition-colors">Geliştirici</button>
+                <a href="mailto:mirsqdmmdevs@gmail.com" className="block hover:text-primary transition-colors">İletişim</a>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-3">Yasal</h4>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <button onClick={() => navigate('/privacy')} className="block hover:text-primary transition-colors">Gizlilik & KVKK</button>
+                <button onClick={() => navigate('/terms')} className="block hover:text-primary transition-colors">Kullanım Şartları</button>
+                <button onClick={() => navigate('/licenses')} className="block hover:text-primary transition-colors">Açık Kaynak Lisanslar</button>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-3">Sosyal</h4>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <a href="https://instagram.com/mirsqdmmdevs" target="_blank" rel="noopener noreferrer" className="block hover:text-primary transition-colors">Instagram</a>
+                <a href="https://github.com/mirsqdmmdeb" target="_blank" rel="noopener noreferrer" className="block hover:text-primary transition-colors">GitHub</a>
+              </div>
             </div>
           </div>
-          <p className="text-xs text-center mt-4 text-muted-foreground/70">
-            Bu site öğrenme amaçlıdır. Hiçbir içerik finansal veya tıbbi tavsiye değildir.
-          </p>
+
+          <div className="border-t border-border/50 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+            <p>© 2025 Yanlik · Created by <span className="font-semibold text-primary">mirsqdmmdevs</span></p>
+            <p className="text-xs text-muted-foreground/70">
+              Bu site öğrenme amaçlıdır. Hiçbir içerik finansal veya tıbbi tavsiye değildir.
+            </p>
+          </div>
         </div>
       </div>
     </div>
