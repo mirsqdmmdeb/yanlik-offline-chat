@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, User, Trash2, Cookie, Shield } from 'lucide-react';
+import { ArrowLeft, User, Trash2, Cookie, Shield, Download, Eye, Type, Accessibility, Database, AlertTriangle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { analytics } from '@/lib/analytics';
+import { useAccessibility } from '@/hooks/useAccessibility';
+import { downloadExportData, clearAllUserData } from '@/lib/dataExport';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,11 +29,16 @@ const Settings = () => {
   const { theme, setTheme, colorTheme, setColorTheme } = useTheme();
   const { user, deleteAccount, logout } = useAuth();
   const { toast } = useToast();
+  const { settings: accessibilitySettings, updateSetting: updateAccessibility, resetSettings: resetAccessibility } = useAccessibility();
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [notifications, setNotifications] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
   const [cookieConsent, setCookieConsent] = useState<'accepted' | 'rejected' | null>(null);
+  const [ipMasking, setIpMasking] = useState(true);
+  const [anonymousMode, setAnonymousMode] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('yanlik_settings');
@@ -42,22 +48,64 @@ const Settings = () => {
       setNotifications(settings.notifications ?? true);
       setSoundEnabled(settings.soundEnabled ?? true);
       setAutoSave(settings.autoSave ?? true);
+      setIpMasking(settings.ipMasking ?? true);
+      setAnonymousMode(settings.anonymousMode ?? false);
     }
     
-    // Load cookie consent status
     const consent = localStorage.getItem('cookie-consent');
     setCookieConsent(consent as 'accepted' | 'rejected' | null);
   }, []);
 
   useEffect(() => {
-    const settings = { fontSize, notifications, soundEnabled, autoSave };
+    const settings = { fontSize, notifications, soundEnabled, autoSave, ipMasking, anonymousMode };
     localStorage.setItem('yanlik_settings', JSON.stringify(settings));
     
     const root = document.documentElement;
     if (fontSize === 'small') root.style.fontSize = '14px';
     else if (fontSize === 'large') root.style.fontSize = '18px';
     else root.style.fontSize = '16px';
-  }, [fontSize, notifications, soundEnabled, autoSave]);
+  }, [fontSize, notifications, soundEnabled, autoSave, ipMasking, anonymousMode]);
+
+  const handleExportData = async () => {
+    if (!user) return;
+    setIsExporting(true);
+    try {
+      await downloadExportData(user.id || 'anonymous', user.username);
+      toast({
+        title: "Veriler İndirildi",
+        description: "Tüm verileriniz JSON dosyası olarak indirildi.",
+      });
+    } catch (error) {
+      toast({
+        title: "Hata",
+        description: "Veri dışa aktarma başarısız oldu.",
+        variant: "destructive",
+      });
+    }
+    setIsExporting(false);
+  };
+
+  const handleClearAllData = async () => {
+    setIsDeleting(true);
+    try {
+      await clearAllUserData();
+      toast({
+        title: "Veriler Silindi",
+        description: "Tüm verileriniz kalıcı olarak silindi.",
+      });
+      setTimeout(() => {
+        logout();
+        navigate('/');
+      }, 1500);
+    } catch (error) {
+      toast({
+        title: "Hata",
+        description: "Veri silme işlemi başarısız oldu.",
+        variant: "destructive",
+      });
+    }
+    setIsDeleting(false);
+  };
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -70,6 +118,7 @@ const Settings = () => {
         <h1 className="mb-6 text-3xl font-bold">Ayarlar</h1>
 
         <div className="space-y-4">
+          {/* Görünüm */}
           <Card>
             <CardHeader>
               <CardTitle>Görünüm</CardTitle>
@@ -152,6 +201,76 @@ const Settings = () => {
             </CardContent>
           </Card>
 
+          {/* Erişilebilirlik */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Accessibility className="w-5 h-5" />
+                Erişilebilirlik
+              </CardTitle>
+              <CardDescription>Görme ve okuma kolaylıkları için ayarlar</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="highContrast" className="flex items-center gap-2">
+                    <Eye className="w-4 h-4" />
+                    Yüksek Kontrast
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Renk körleri için optimize edilmiş görünüm</p>
+                </div>
+                <Switch
+                  id="highContrast"
+                  checked={accessibilitySettings.highContrast}
+                  onCheckedChange={(value) => updateAccessibility('highContrast', value)}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="dyslexicFont" className="flex items-center gap-2">
+                    <Type className="w-4 h-4" />
+                    Disleksi Fontu
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Disleksi olanlar için özel okunabilir yazı tipi</p>
+                </div>
+                <Switch
+                  id="dyslexicFont"
+                  checked={accessibilitySettings.dyslexicFont}
+                  onCheckedChange={(value) => updateAccessibility('dyslexicFont', value)}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="reducedMotion">Azaltılmış Hareket</Label>
+                  <p className="text-xs text-muted-foreground">Animasyonları ve geçişleri azalt</p>
+                </div>
+                <Switch
+                  id="reducedMotion"
+                  checked={accessibilitySettings.reducedMotion}
+                  onCheckedChange={(value) => updateAccessibility('reducedMotion', value)}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="largeText">Büyük Metin</Label>
+                  <p className="text-xs text-muted-foreground">Tüm metinleri daha büyük göster</p>
+                </div>
+                <Switch
+                  id="largeText"
+                  checked={accessibilitySettings.largeText}
+                  onCheckedChange={(value) => updateAccessibility('largeText', value)}
+                />
+              </div>
+              <Button variant="outline" size="sm" onClick={resetAccessibility} className="mt-2">
+                Erişilebilirlik Ayarlarını Sıfırla
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Bildirimler */}
           <Card>
             <CardHeader>
               <CardTitle>Bildirimler</CardTitle>
@@ -173,6 +292,7 @@ const Settings = () => {
             </CardContent>
           </Card>
 
+          {/* Genel */}
           <Card>
             <CardHeader>
               <CardTitle>Genel</CardTitle>
@@ -186,6 +306,7 @@ const Settings = () => {
             </CardContent>
           </Card>
 
+          {/* Hesap Bilgileri */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -243,6 +364,7 @@ const Settings = () => {
             </CardContent>
           </Card>
 
+          {/* Çerez ve Gizlilik */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -298,6 +420,37 @@ const Settings = () => {
                   Reddet
                 </Button>
               </div>
+
+              <Separator />
+
+              {/* IP Masking */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="ipMasking" className="flex items-center gap-2">
+                    <Shield className="w-4 h-4" />
+                    IP Adresi Gizleme
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Google Analytics'e IP adresiniz gönderilmez</p>
+                </div>
+                <Switch
+                  id="ipMasking"
+                  checked={ipMasking}
+                  onCheckedChange={setIpMasking}
+                />
+              </div>
+
+              {/* Anonymous Mode */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="anonymousMode">Anonim Analiz Modu</Label>
+                  <p className="text-xs text-muted-foreground">Hiçbir kişisel veri toplamadan sadece teknik hata takibi</p>
+                </div>
+                <Switch
+                  id="anonymousMode"
+                  checked={anonymousMode}
+                  onCheckedChange={setAnonymousMode}
+                />
+              </div>
               
               <Button
                 variant="ghost"
@@ -310,10 +463,88 @@ const Settings = () => {
             </CardContent>
           </Card>
 
+          {/* KVKK/GDPR Veri Yönetimi */}
           <Card>
             <CardHeader>
-              <CardTitle>Veri Yönetimi</CardTitle>
-              <CardDescription>Uygulama verilerini yönetin</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="w-5 h-5" />
+                KVKK/GDPR Veri Yönetimi
+              </CardTitle>
+              <CardDescription>Kişisel verilerinizi yönetin ve dışa aktarın</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-2">
+                <p className="text-sm font-medium">📋 Veri Yerelliği Garantisi</p>
+                <p className="text-xs text-muted-foreground">
+                  Tüm verileriniz yalnızca cihazınızda (IndexedDB ve LocalStorage) saklanır. 
+                  Hiçbir veri sunuculara gönderilmez veya bulutta depolanmaz.
+                </p>
+              </div>
+
+              {/* Veri Dışa Aktarma */}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleExportData}
+                disabled={isExporting}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {isExporting ? 'Dışa Aktarılıyor...' : 'Tüm Verilerimi İndir (JSON)'}
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                KVKK Madde 11 ve GDPR Madde 20 kapsamında veri taşınabilirlik hakkınız
+              </p>
+
+              <Separator />
+
+              {/* Kalıcı Silme */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="w-full">
+                    <AlertTriangle className="mr-2 h-4 w-4" />
+                    Tüm Verileri Kalıcı Olarak Sil
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                      <AlertTriangle className="w-5 h-5" />
+                      Kalıcı Silme Uyarısı
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-2">
+                      <p>Bu işlem GERİ ALINAMAZ. Aşağıdaki veriler kalıcı olarak silinecektir:</p>
+                      <ul className="list-disc list-inside text-sm space-y-1">
+                        <li>Tüm sohbet geçmişi</li>
+                        <li>Favoriler ve kaydedilen mesajlar</li>
+                        <li>Ayarlar ve tercihler</li>
+                        <li>Oturum bilgileri</li>
+                      </ul>
+                      <p className="font-semibold mt-2">Bu işlemi onaylıyor musunuz?</p>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>İptal</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleClearAllData}
+                      disabled={isDeleting}
+                      className="bg-destructive hover:bg-destructive/90"
+                    >
+                      {isDeleting ? 'Siliniyor...' : 'Evet, Tümünü Sil'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <p className="text-xs text-muted-foreground text-center">
+                KVKK Madde 11 ve GDPR Madde 17 kapsamında silme hakkınız (Unutulma Hakkı)
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Veri Yönetimi */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ayar Yönetimi</CardTitle>
+              <CardDescription>Uygulama ayarlarını yönetin</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               <Button
@@ -329,6 +560,34 @@ const Settings = () => {
                 }}
               >
                 Ayarları Sıfırla
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Hızlı Linkler */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Hızlı Linkler</CardTitle>
+              <CardDescription>Önemli sayfalara hızlı erişim</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-2">
+              <Button variant="outline" size="sm" onClick={() => navigate('/privacy')}>
+                Gizlilik Politikası
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/terms')}>
+                Kullanım Şartları
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/licenses')}>
+                Açık Kaynak Lisanslar
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/faq')}>
+                SSS
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/status')}>
+                Sistem Durumu
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/developer')}>
+                Geliştirici
               </Button>
             </CardContent>
           </Card>
